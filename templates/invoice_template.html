@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <title>Facture - {{ invoice.invoice_ref }}</title>
+    <style>
+        @page {
+            size: a4 portrait;
+            margin: 20mm 20mm 20mm 20mm;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, 'DejaVu Sans', sans-serif;
+            color: #000000;
+            background-color: #FFFFFF;
+            font-size: 10.5pt;
+            line-height: 1.45;
+            padding: 10px 15px;
+        }
+
+        /* Header Layout */
+        .header-container {
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .header-table td {
+            vertical-align: bottom;
+        }
+
+        .logo-img {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .company-info {
+            font-size: 10pt;
+            line-height: 1.4;
+            color: #000000;
+        }
+
+        .company-info .info-line {
+            margin-bottom: 2px;
+        }
+
+        .company-info b {
+            font-weight: 700;
+        }
+
+        .invoice-title-cell {
+            text-align: right;
+            vertical-align: bottom;
+            padding-bottom: 6px;
+        }
+
+        .invoice-title {
+            font-size: 18pt;
+            font-weight: 800;
+            color: #000000;
+            letter-spacing: 0.2px;
+        }
+
+        /* Full Width Divider */
+        .divider {
+            width: 100%;
+            height: 2px;
+            background-color: #000000;
+            margin-top: 4px;
+            margin-bottom: 24px;
+        }
+
+        /* Section Headings */
+        .section-title {
+            font-size: 13pt;
+            font-weight: 800;
+            color: #000000;
+            margin-bottom: 14px;
+            margin-top: 18px;
+        }
+
+        /* Client Details */
+        .client-info-block {
+            margin-bottom: 26px;
+            font-size: 10.5pt;
+            line-height: 1.5;
+        }
+
+        .client-line {
+            margin-bottom: 3px;
+        }
+
+        .client-line b {
+            font-weight: 700;
+        }
+
+        /* Items Table */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #000000;
+        }
+
+        .items-table th,
+        .items-table td {
+            border: 1px solid #666666;
+            padding: 8px 10px;
+            font-size: 10pt;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        .items-table th {
+            background-color: #EDEDED;
+            color: #000000;
+            font-weight: 700;
+            border-bottom: 1.5px solid #000000;
+        }
+
+        .items-table td {
+            color: #000000;
+        }
+
+        .items-table tr.total-row td {
+            font-weight: 700;
+            border-top: 1.5px solid #000000;
+            padding: 9px 10px;
+        }
+
+        .items-table tr.total-row td.total-label {
+            font-weight: 800;
+        }
+
+        .items-table tr.total-row td.total-amount {
+            font-weight: 800;
+        }
+
+        .empty-row td {
+            text-align: center;
+            color: #777777;
+            padding: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Block -->
+    <div class="header-container">
+        <table class="header-table">
+            <tr>
+                <td style="width: 65%;">
+                    {% if logo_base64 %}
+                    <img src="data:image/png;base64,{{ logo_base64 }}" class="logo-img" alt="Logo">
+                    {% else %}
+                    <img src="/static/img/logo.png" class="logo-img" alt="Logo">
+                    {% endif %}
+                    <div class="company-info">
+                        <div class="info-line"><b>Nom de la Société :</b> {{ company_name }}</div>
+                        <div class="info-line"><b>Adresse :</b> {{ company_address }}</div>
+                        <div class="info-line"><b>Téléphone :</b> {{ company_phone }}</div>
+                        <div class="info-line"><b>Email :</b> {{ company_email }}</div>
+                    </div>
+                </td>
+                <td class="invoice-title-cell" style="width: 35%;">
+                    <div class="invoice-title">Facture</div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Solid Divider Line -->
+    <div class="divider"></div>
+
+    <!-- Client Information Section -->
+    <div class="section-title">Les informations du client</div>
+    <div class="client-info-block">
+        <div class="client-line"><b>Nom :</b> {{ invoice.client_name }}</div>
+        <div class="client-line"><b>Adresse :</b> {{ invoice.client_address }}</div>
+        <div class="client-line"><b>Date de la transaction :</b> {{ invoice.transaction_date or invoice.date_str }}</div>
+        <div class="client-line"><b>Statut de la transaction :</b> {{ invoice.transaction_status or "En attente" }}</div>
+    </div>
+
+    <!-- Purchased Items Section -->
+    <div class="section-title">Articles achetés</div>
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th style="width: 25%;">Référence</th>
+                <th style="width: 25%;">Marque</th>
+                <th style="width: 10%;">Qte</th>
+                <th style="width: 20%;">Prix unitaire ({{ currency }})</th>
+                <th style="width: 20%;">Total ({{ currency }})</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in invoice.items %}
+            <tr>
+                <td>{{ item.reference or item.description }}</td>
+                <td>{{ item.brand or "" }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ "%.2f"|format(item.unit_price) }}</td>
+                <td>{{ "%.2f"|format(item.subtotal) }}</td>
+            </tr>
+            {% else %}
+            <tr class="empty-row">
+                <td colspan="5">Aucun article dans cette facture.</td>
+            </tr>
+            {% endfor %}
+            <!-- Total Row -->
+            <tr class="total-row">
+                <td colspan="4" class="total-label">Montant total:</td>
+                <td class="total-amount">{{ "%.2f"|format(invoice.grand_total) }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+</body>
+</html>

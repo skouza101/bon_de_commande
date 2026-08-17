@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consolidation Factures Pneus — Tableau de Bord</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/img/pneus_logo.ico">
+    <link rel="shortcut icon" href="/static/img/pneus_logo.ico">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Vector Icons Library (Local Fast Engine + CDN) -->
+    <script src="/static/js/icons.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Dashboard Stylesheet -->
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <div class="app-layout">
+        
+        <!-- SIDEBAR NAVIGATION -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">
+                    <img src="/static/img/pneus_logo.png" alt="Logo de l'Entreprise" class="brand-logo-img">
+                </div>
+                <div class="brand-text">
+                    <span class="brand-title">TyreConsolidator</span>
+                    <span class="brand-subtitle">Gestion & Facturation</span>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="#dashboard" class="nav-item active" data-tab="dashboard">
+                    <span class="nav-icon"><i data-lucide="layout-dashboard"></i></span>
+                    <span>Tableau de Bord</span>
+                </a>
+                <a href="#scanner" class="nav-item" data-tab="scanner">
+                    <span class="nav-icon"><i data-lucide="scan-line"></i></span>
+                    <span>Numérisation & Scan</span>
+                </a>
+                <a href="#archive" class="nav-item" data-tab="archive">
+                    <span class="nav-icon"><i data-lucide="folder-archive"></i></span>
+                    <span>Historique Factures</span>
+                </a>
+                <a href="#settings" class="nav-item" data-tab="settings">
+                    <span class="nav-icon"><i data-lucide="settings-2"></i></span>
+                    <span>Paramètres & API</span>
+                </a>
+            </nav>
+
+            
+        </aside>
+
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="main-content">
+            
+            <!-- TOP HEADER BAR -->
+            <header class="top-header">
+                <div class="header-left">
+                    <h1 class="header-title" id="header-title">Tableau de Bord & Métriques</h1>
+                    <p class="header-subtitle" id="header-subtitle">Vue d'ensemble de l'activité, chiffre d'affaires et statistiques pneumatiques</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary btn-sm" id="theme-toggle-btn">
+                        <i data-lucide="moon" id="theme-icon"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- TAB CONTENTS -->
+            <div class="content-body">
+                
+                <!-- 1. DASHBOARD & ANALYTICS TAB -->
+                <section class="tab-pane active" id="tab-dashboard">
+                    
+                    <!-- KPI Cards Grid (6 cards, 3 per row) -->
+                    <div class="kpi-grid">
+                        <div class="kpi-card">
+                            <div class="kpi-icon icon-blue">
+                                <i data-lucide="circle-dollar-sign"></i>
+                            </div>
+                            <div class="kpi-meta">
+                                <div class="kpi-label">Chiffre d'Affaires Total</div>
+                                <div class="kpi-value" id="kpi-revenue">0,00 DH</div>
+                            </div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div class="kpi-icon icon-emerald">
+                                <i data-lucide="disc"></i>
+                            </div>
+                            <div class="kpi-meta">
+                                <div class="kpi-label">Pneus Consolidés</div>
+                                <div class="kpi-value" id="kpi-tyres">0 pcs</div>
+                            </div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div class="kpi-icon icon-indigo">
+                                <i data-lucide="file-text"></i>
+                            </div>
+                            <div class="kpi-meta">
+                                <div class="kpi-label">Factures Émises</div>
+                                <div class="kpi-value" id="kpi-invoices">0</div>
+                            </div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div class="kpi-icon icon-amber">
+                                <i data-lucide="trending-up"></i>
+                            </div>
+                            <div class="kpi-meta">
+                                <div class="kpi-label">Panier Moyen</div>
+                                <div class="kpi-value" id="kpi-avg">0,00 DH</div>
+                            </div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div class="kpi-icon icon-rose">
+                                <i data-lucide="crown"></i>
+                            </div>
+                            <div class="kpi-meta">
+                                <div class="kpi-label">Plus Grosse Facture</div>
+                                <div class="kpi-value" id="kpi-max-invoice">0,00 DH</div>
+                            </div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div class="kpi-icon icon-cyan">
+                                <i data-lucide="layers"></i>
+                            </div>
+                            <div class="kpi-meta">
+                                <div class="kpi-label">Moy. Articles / Facture</div>
+                                <div class="kpi-value" id="kpi-avg-items">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Revenue Trend Chart (full-width) -->
+                    <div class="card" style="margin-top: 24px;">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <i data-lucide="bar-chart-3"></i> Évolution du Chiffre d'Affaires par Jour
+                            </div>
+                        </div>
+                        <div class="revenue-trend-container" id="chart-revenue-trend">
+                            <!-- Rendered dynamically by JS -->
+                        </div>
+                    </div>
+
+
+
+                    <!-- Recent Activity Table -->
+                    <div class="card" style="margin-top: 24px;">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <i data-lucide="clock"></i> Dernières Factures Consolidées
+                            </div>
+                        </div>
+                        <div class="data-table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Référence</th>
+                                        <th>Client</th>
+                                        <th>Date</th>
+                                        <th>Quantité</th>
+                                        <th>Montant Total</th>
+                                        <th>Origine</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recent-invoices-tbody">
+                                    <!-- Rendered dynamically by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- 2. SCANNER & INGESTION TAB -->
+                <section class="tab-pane" id="tab-scanner">
+                    <div class="scanner-container">
+                        
+                        <!-- Missing API Key Warning Banner -->
+                        <div id="scanner-api-warning" style="display: none; margin-bottom: 20px; padding: 14px 18px; background: rgba(239, 68, 68, 0.12); border: 1px solid var(--accent-rose); border-radius: 8px; color: var(--accent-rose); align-items: center; justify-content: space-between;">
+                            <div>
+                                <span style="font-weight: 700;"><i data-lucide="alert-triangle"></i> Clé de service non configurée !</span>
+                                <span style="font-size: 13px; margin-left: 8px; opacity: 0.9;">La numérisation automatique nécessite une clé d'accès configurée.</span>
+                            </div>
+                            <button class="btn btn-rose btn-sm" id="goto-settings-btn"><i data-lucide="settings-2"></i> Configurer la Clé</button>
+                        </div>
+
+                        <!-- Upload Card -->
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title"><i data-lucide="scan-line"></i> Importer des Bons Manuscrits</div>
+                            </div>
+
+                            <!-- Drag and drop zone -->
+                            <div class="dropzone-box" id="dropzone">
+                                <input type="file" id="file-input" class="file-input-hidden" multiple accept="image/*">
+                                <div class="dropzone-icon"><i data-lucide="upload-cloud"></i></div>
+                                <div class="dropzone-title">Glissez & déposez vos photos de bons ici</div>
+                                <div class="dropzone-subtitle">Prend en charge les formats JPG, PNG, WebP (Multi-sélection autorisée)</div>
+                            </div>
+
+                            <!-- Preview Grid -->
+                            <div class="preview-grid" id="preview-grid"></div>
+
+                            <!-- Input form fields & actions in one single line -->
+                            <div class="form-row" style="margin-top: 20px; display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap;">
+                                <div class="form-group" style="flex: 1; min-width: 220px;">
+                                    <label class="form-label">Nom du Client / Garage (Optionnel)</label>
+                                    <input type="text" id="client-name-input" class="form-input" placeholder="ex: Garage Al Amal Casablanca">
+                                </div>
+                                <div class="form-group" style="flex: 1; min-width: 220px;">
+                                    <label class="form-label">Adresse du Client (Optionnel)</label>
+                                    <input type="text" id="client-address-input" class="form-input" placeholder="ex: Sidi Bennour, Maroc">
+                                </div>
+                                <div style="display: flex; gap: 8px; align-items: center; flex-shrink: 0;">
+                                    <button class="btn btn-secondary" id="clear-files-btn" style="display: none;" title="Effacer"><i data-lucide="trash-2"></i></button>
+                                    <button class="btn btn-primary" id="start-scan-btn" disabled style="white-space: nowrap; height: 42px;">
+                                        <i data-lucide="scan"></i> <span>Lancer la Numérisation & Facturation</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Progress Stepper -->
+                            <div class="progress-stepper" id="progress-stepper">
+                                <div class="stepper-header">
+                                    <span id="stepper-label"><i data-lucide="loader-2"></i> Traitement en cours...</span>
+                                </div>
+                                <div class="progress-bar-track">
+                                    <div class="progress-bar-fill" id="progress-bar-fill"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Results & Live Edit Card -->
+                        <div class="card results-card" id="results-card">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title" id="results-ref-title">Facture Consolidée</div>
+                                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;" id="results-summary-text"></div>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="btn btn-secondary btn-sm" id="preview-pdf-btn"><i data-lucide="eye"></i> Aperçu PDF</button>
+                                    <button class="btn btn-emerald btn-sm" id="download-pdf-btn"><i data-lucide="download"></i> Télécharger PDF</button>
+                                </div>
+                            </div>
+
+                            <!-- Client Info Edit Row -->
+                            <div class="form-row" style="display: flex; gap: 14px; margin-bottom: 14px;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label class="form-label">Client</label>
+                                    <input type="text" id="edit-client-name" class="form-input" placeholder="Nom du client">
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label class="form-label">Adresse Client</label>
+                                    <input type="text" id="edit-client-address" class="form-input" placeholder="Adresse">
+                                </div>
+                                <div class="form-group" style="flex: 0.7;">
+                                    <label class="form-label">Statut</label>
+                                    <select id="edit-transaction-status" class="form-select">
+                                        <option value="En attente">En attente</option>
+                                        <option value="Validé">Validé</option>
+                                        <option value="Payé">Payé</option>
+                                        <option value="Livré">Livré</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Editable Table -->
+                            <div class="data-table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 5%; text-align: center;">#</th>
+                                            <th style="width: 28%;">Référence</th>
+                                            <th style="width: 24%;">Marque (Sélection)</th>
+                                            <th style="width: 13%;">Quantité (pcs)</th>
+                                            <th style="width: 14%;">Prix Unitaire</th>
+                                            <th style="width: 11%;">Sous-Total</th>
+                                            <th style="width: 5%; text-align: center;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="results-table-body">
+                                        <!-- Editable rows rendered dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Table Controls & Totals -->
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-color);">
+                                <button class="btn btn-secondary btn-sm" id="add-row-btn"><i data-lucide="plus"></i> Ajouter une ligne</button>
+                                
+                                <div style="display: flex; align-items: center; gap: 24px;">
+                                    <div style="font-size: 13px; font-weight: 700; color: var(--text-secondary);">
+                                        Total Pièces : <span id="results-total-qty" style="color: var(--accent-blue);">0 pcs</span>
+                                    </div>
+                                    <div style="font-size: 16px; font-weight: 800; color: var(--text-primary);">
+                                        Montant Total : <span id="results-grand-total" style="color: var(--accent-emerald);">0.00 DH</span>
+                                    </div>
+                                    <button class="btn btn-primary" id="recalculate-btn"><i data-lucide="save"></i> Enregistrer & Régénérer PDF</button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+
+                <!-- 3. ARCHIVE TAB -->
+                <section class="tab-pane" id="tab-archive">
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <span class="card-title"><i data-lucide="folder-archive"></i> Factures Consolidées</span>
+                                <span class="table-badge source-telegram" id="archive-total-badge">0 factures</span>
+                            </div>
+                            <div style="width: 320px;">
+                                <input type="text" id="archive-search-input" class="form-input" placeholder="Rechercher référence, client...">
+                            </div>
+                        </div>
+
+                        <div class="data-table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Référence</th>
+                                        <th>Client</th>
+                                        <th>Date</th>
+                                        <th>Volume Pneus</th>
+                                        <th>Montant Total</th>
+                                        <th>Canal</th>
+                                        <th style="text-align: right;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="archive-table-body">
+                                    <!-- Rendered dynamically by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. SETTINGS TAB -->
+                <section class="tab-pane" id="tab-settings">
+                    <div style="max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px;">
+                        
+                        <!-- CARD 1: AI & Vision Engine Service -->
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title"><i data-lucide="cpu"></i> Moteur d'Extraction & Clés d'Accès</div>
+                                <span class="table-badge source-web" id="active-service-badge" style="font-size: 11px;">Service Actif</span>
+                            </div>
+
+                            <div style="display: flex; flex-direction: column; gap: 16px;">
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                        <label class="form-label" style="font-weight: 700; font-size: 13px; margin-bottom: 0;">Mode d'Extraction Multimodal</label>
+                                        <span style="font-size: 11.5px; color: var(--accent-emerald); font-weight: 600;">
+                                            <i data-lucide="shield-check"></i> Basculement automatique Gemini ➔ OpenRouter actif
+                                        </span>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                        <label class="provider-card active" id="provider-gemini-label">
+                                            <input type="radio" name="ai_provider" value="gemini" id="provider-gemini" checked>
+                                            <div>
+                                                <div style="font-weight: 700; font-size: 13px;"><i data-lucide="zap"></i> Google Gemini (Principal)</div>
+                                                <div style="font-size: 11px; color: var(--text-muted);">Moteur principal • Rapide & Précis</div>
+                                            </div>
+                                        </label>
+                                        <label class="provider-card" id="provider-deepseek-label">
+                                            <input type="radio" name="ai_provider" value="deepseek" id="provider-deepseek">
+                                            <div>
+                                                <div style="font-weight: 700; font-size: 13px;"><i data-lucide="globe"></i> OpenRouter (Secours / Dédié)</div>
+                                                <div style="font-size: 11px; color: var(--text-muted);">Relais automatique si Gemini indisponible</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Gemini Configuration Panel -->
+                                <div id="gemini-config-panel" class="panel-subcard">
+                                    <div class="form-group">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <label class="form-label">Clé API Google Gemini</label>
+                                            <span class="table-badge source-web" id="gemini-status-badge">Vérification...</span>
+                                        </div>
+                                        <div style="display: flex; gap: 8px; margin-top: 4px;">
+                                            <input type="password" id="settings-gemini-key" class="form-input" placeholder="AIzaSy... (Saisissez votre clé Gemini)">
+                                            <button class="btn btn-secondary" id="toggle-gemini-key-btn" type="button" title="Afficher/Masquer"><i data-lucide="eye"></i></button>
+                                            <button class="btn btn-secondary" id="test-gemini-key-btn" type="button"><i data-lucide="flask-conical"></i> Tester</button>
+                                        </div>
+                                        <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 5px;" id="gemini-key-hint">
+                                            Obtenez gratuitement une clé sur <a href="https://aistudio.google.com/" target="_blank" style="color: var(--accent-blue);">Google AI Studio</a>.
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group" style="margin-top: 6px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                            <label class="form-label" style="margin-bottom: 0;">Modèle Gemini</label>
+                                            <button type="button" class="btn btn-secondary btn-sm" id="refresh-gemini-models-btn" style="padding: 2px 8px; font-size: 11px;">
+                                                <i data-lucide="refresh-cw"></i> Détecter modèles
+                                            </button>
+                                        </div>
+                                        <select id="settings-gemini-model" class="form-select">
+                                            <option value="gemini-2.5-flash">gemini-2.5-flash (Recommandé • Très rapide)</option>
+                                            <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+                                            <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                                            <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- OpenRouter Configuration Panel -->
+                                <div id="deepseek-config-panel" class="panel-subcard" style="display: none;">
+                                    <div class="form-group">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <label class="form-label">Clé API OpenRouter</label>
+                                            <span class="table-badge source-web" id="deepseek-status-badge">Non configuré</span>
+                                        </div>
+                                        <div style="display: flex; gap: 8px; margin-top: 4px;">
+                                            <input type="password" id="settings-deepseek-key" class="form-input" placeholder="sk-or-v1-... (Collez votre clé OpenRouter)">
+                                            <button class="btn btn-secondary" id="toggle-deepseek-key-btn" type="button" title="Afficher/Masquer"><i data-lucide="eye"></i></button>
+                                            <button class="btn btn-secondary" id="test-deepseek-key-btn" type="button"><i data-lucide="flask-conical"></i> Tester</button>
+                                        </div>
+                                        <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 5px;" id="deepseek-key-hint">
+                                            Obtenez une clé sur <a href="https://openrouter.ai/keys" target="_blank" style="color: var(--accent-blue);">openrouter.ai/keys</a>.
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group" style="margin-top: 6px;">
+                                        <label class="form-label">Modèle Vision OpenRouter</label>
+                                        <select id="settings-deepseek-model" class="form-select">
+                                            <option value="google/gemini-3.1-flash-lite-image">google/gemini-3.1-flash-lite-image (Recommandé • Ultra Économique & Rapide)</option>
+                                            <option value="google/gemini-2.5-flash-image">google/gemini-2.5-flash-image (Vision Rapide)</option>
+                                            <option value="qwen/qwen3-vl-8b-instruct">qwen/qwen3-vl-8b-instruct (Économique)</option>
+                                            <option value="qwen/qwen2.5-vl-72b-instruct">qwen/qwen2.5-vl-72b-instruct (Haute Précision)</option>
+                                            <option value="openrouter/free">openrouter/free (Routeur Gratuit Vision)</option>
+                                        </select>
+                                        <input type="hidden" id="settings-deepseek-base-url" value="https://openrouter.ai/api/v1">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CARD 2: Company Information -->
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title"><i data-lucide="building-2"></i> Informations de l'Entreprise & Facturation</div>
+                            </div>
+
+                            <div style="display: flex; flex-direction: column; gap: 14px;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                                    <div class="form-group">
+                                        <label class="form-label">Nom de la Société / En-tête</label>
+                                        <input type="text" id="settings-company-name" class="form-input" value="{{ company_name }}" placeholder="Tous Pneus">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Devise de Facturation</label>
+                                        <input type="text" id="settings-currency" class="form-input" value="{{ currency }}" placeholder="MAD ou DH">
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Adresse Physique (Imprimée sur la facture)</label>
+                                    <input type="text" id="settings-company-address" class="form-input" value="{{ company_address }}" placeholder="Adresse complète">
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                                    <div class="form-group">
+                                        <label class="form-label">Téléphone</label>
+                                        <input type="text" id="settings-company-phone" class="form-input" value="{{ company_phone }}" placeholder="+212 6XX XX XX XX">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Email Professionnel</label>
+                                        <input type="email" id="settings-company-email" class="form-input" value="{{ company_email }}" placeholder="contact@societe.com">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Save Actions Bar -->
+                        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-bottom: 20px;">
+                            <button class="btn btn-primary" id="save-settings-btn" style="padding: 12px 24px; font-size: 14px; font-weight: 700;">
+                                <i data-lucide="save"></i> Enregistrer les Paramètres
+                            </button>
+                        </div>
+
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Invoice Review & PDF Modal -->
+    <div class="modal-overlay" id="pdf-modal">
+        <div class="modal-box modal-box-large">
+            <div class="modal-header">
+                <div class="modal-header-info">
+                    <div class="modal-title" id="pdf-modal-title">Facture #REC-2026-08-0042</div>
+                    <div class="modal-subtitle" id="pdf-modal-subtitle">Garage Al Amal • 17/08/2026</div>
+                </div>
+                <div class="modal-header-actions">
+                    <div class="modal-view-toggle">
+                        <button class="modal-tab-btn active" id="modal-tab-table-btn"><i data-lucide="table"></i> Tableau des Lignes</button>
+                        <button class="modal-tab-btn" id="modal-tab-pdf-btn"><i data-lucide="file-text"></i> Document PDF</button>
+                    </div>
+                    <a href="#" class="btn btn-primary btn-sm" id="pdf-modal-download"><i data-lucide="download"></i> Télécharger PDF</a>
+                    <button class="modal-close-btn" id="pdf-modal-close">&times;</button>
+                </div>
+            </div>
+
+            <!-- TAB 1: Structured Items Review View -->
+            <div class="modal-view-content" id="modal-table-view">
+                <div class="modal-summary-kpis">
+                    <div class="modal-kpi-item">
+                        <span class="modal-kpi-lbl">Client</span>
+                        <span class="modal-kpi-val" id="modal-val-client">-</span>
+                    </div>
+                    <div class="modal-kpi-item">
+                        <span class="modal-kpi-lbl">Volume Total</span>
+                        <span class="modal-kpi-val" id="modal-val-qty">0 pcs</span>
+                    </div>
+                    <div class="modal-kpi-item">
+                        <span class="modal-kpi-lbl">Modèles Distincts</span>
+                        <span class="modal-kpi-val" id="modal-val-items">0</span>
+                    </div>
+                    <div class="modal-kpi-item">
+                        <span class="modal-kpi-lbl">Montant Global</span>
+                        <span class="modal-kpi-val text-emerald" id="modal-val-total">0.00 DH</span>
+                    </div>
+                </div>
+
+                <div class="data-table-container modal-table-scroll">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 6%; text-align: center;">#</th>
+                                <th style="width: 32%;">Référence</th>
+                                <th style="width: 24%;">Marque</th>
+                                <th style="width: 12%; text-align: center;">Quantité</th>
+                                <th style="width: 13%; text-align: right;">Prix Unitaire</th>
+                                <th style="width: 13%; text-align: right;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modal-items-tbody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 2: Embedded PDF Preview View -->
+            <div class="modal-view-content" id="modal-pdf-view" style="display: none; height: 100%;">
+                <div class="modal-pdf-body">
+                    <iframe id="pdf-modal-frame" src="" frameborder="0"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Lightbox Preview Modal -->
+    <div class="image-lightbox" id="image-lightbox" style="display: none;">
+        <button class="lightbox-close" id="lightbox-close" title="Fermer (Échap)">&times;</button>
+        <div class="lightbox-content">
+            <img id="lightbox-img" src="" alt="Aperçu du bon de commande">
+            <div class="lightbox-caption" id="lightbox-caption"></div>
+        </div>
+    </div>
+
+    <!-- Frontend Script -->
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

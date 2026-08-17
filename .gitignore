@@ -1,0 +1,39 @@
+# Environment files (CRITICAL: Do not leak API keys)
+.env
+.env.local
+.env.*.local
+
+# Python cache & bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Application generated files & Database
+invoices.db
+invoices.db-journal
+invoices.db-wal
+invoices.db-shm
+temp_downloads/
+output_invoices/
+*.log
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
