@@ -520,12 +520,10 @@ class PDFGenerator:
                 grouped_items[d].append(item)
 
             col_widths = [
-                page_width * 0.23,   # Référence
-                page_width * 0.12,   # Marque
-                page_width * 0.13,   # Dépôt
-                page_width * 0.12,   # Quantité
-                page_width * 0.20,   # Prix unitaire (MAD)
-                page_width * 0.20,   # Total (MAD)
+                page_width * 0.40,   # Référence
+                page_width * 0.25,   # Marque
+                page_width * 0.20,   # Dépôt
+                page_width * 0.15,   # Quantité
             ]
 
             for depot_name, items_list in grouped_items.items():
@@ -537,8 +535,6 @@ class PDFGenerator:
                     Paragraph("<b>Marque</b>", s_th),
                     Paragraph("<b>Dépôt</b>", s_th),
                     Paragraph("<b>Quantité</b>", s_th),
-                    Paragraph(f"<b>Prix unitaire ({settings.currency})</b>", s_th),
-                    Paragraph(f"<b>Total ({settings.currency})</b>", s_th),
                 ]]
 
                 for item in items_list:
@@ -554,8 +550,6 @@ class PDFGenerator:
                         Paragraph(final_brand, s_td),
                         Paragraph(item_depot, s_td),
                         Paragraph(str(item.quantity), s_td),
-                        Paragraph(f"{item.unit_price:.2f}", s_td),
-                        Paragraph(f"{item.subtotal:.2f}", s_td),
                     ])
 
                 magaza_table = Table(table_data, colWidths=col_widths, repeatRows=1)
@@ -579,9 +573,8 @@ class PDFGenerator:
             total_table = Table([
                 [
                     Paragraph(f"<b>Total Pièces : {invoice.total_quantity} pcs</b>", s_tot_lbl),
-                    Paragraph(f"<b>Montant Total Global : {invoice.grand_total:.2f} {settings.currency}</b>", s_tot_val),
                 ]
-            ], colWidths=[page_width * 0.5, page_width * 0.5])
+            ], colWidths=[page_width])
             total_table.setStyle(TableStyle([
                 ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8F9FA")),
                 ("BOX", (0, 0), (-1, -1), 1.2, colors.black),

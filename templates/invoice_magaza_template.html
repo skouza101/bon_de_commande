@@ -159,12 +159,10 @@
         <table class="items-table">
             <thead>
                 <tr>
-                    <th style="width: 23%;">Référence</th>
-                    <th style="width: 12%;">Marque</th>
-                    <th style="width: 13%;">Dépôt</th>
-                    <th style="width: 12%;">Quantité</th>
-                    <th style="width: 20%;">Prix unitaire ({{ currency }})</th>
-                    <th style="width: 20%;">Total ({{ currency }})</th>
+                    <th style="width: 40%;">Référence</th>
+                    <th style="width: 25%;">Marque</th>
+                    <th style="width: 20%;">Dépôt</th>
+                    <th style="width: 15%;">Quantité</th>
                 </tr>
             </thead>
             <tbody>
@@ -174,8 +172,6 @@
                     <td>{{ item.brand or "" }}</td>
                     <td>{{ item.depot or magaza_name }}</td>
                     <td>{{ item.quantity }}</td>
-                    <td>{{ "%.2f"|format(item.unit_price) }}</td>
-                    <td>{{ "%.2f"|format(item.subtotal) }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -186,11 +182,8 @@
     <!-- Overall Summary Box -->
     <table style="width: 100%; border-collapse: collapse; margin-top: 14px; border: 1.5px solid #000000; background-color: #F8F9FA;">
         <tr>
-            <td style="padding: 9px 12px; font-weight: 700; font-size: 10.5pt; width: 50%;">
+            <td style="padding: 9px 12px; font-weight: 700; font-size: 10.5pt; width: 100%;">
                 Total Pièces : <b>{{ invoice.total_quantity }} pcs</b>
-            </td>
-            <td style="padding: 9px 12px; font-weight: 800; font-size: 11pt; text-align: right; width: 50%;">
-                Montant Total Global : {{ "%.2f"|format(invoice.grand_total) }} {{ currency }}
             </td>
         </tr>
     </table>
