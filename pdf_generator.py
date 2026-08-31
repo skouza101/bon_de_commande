@@ -10,7 +10,7 @@ import logging
 import os
 import unicodedata
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -84,6 +84,44 @@ class PDFGenerator:
 
         return self.template.render(
             invoice=invoice,
+            company_name=company,
+            company_address=settings.company_address,
+            company_phone=settings.company_phone,
+            company_email=settings.company_email,
+            currency=curr,
+            logo_base64=logo_base64,
+        )
+
+    def render_magaza_html(
+        self,
+        invoice: ConsolidatedInvoice,
+        company_name: Optional[str] = None,
+        currency: Optional[str] = None,
+    ) -> str:
+        """Render HTML string from Magaza Jinja2 template with grouped items."""
+        from collections import OrderedDict
+        company = company_name or settings.company_name
+        curr = currency or settings.currency
+
+        logo_path = Path(__file__).parent / "static" / "img" / "pneus_logo.png"
+        if not logo_path.exists():
+            logo_path = Path(__file__).parent / "static" / "img" / "logo.png"
+        logo_base64 = ""
+        if logo_path.exists():
+            import base64
+            logo_base64 = base64.b64encode(logo_path.read_bytes()).decode("utf-8")
+
+        grouped_items: Dict[str, List[Any]] = OrderedDict()
+        for item in invoice.items:
+            d = (getattr(item, "depot", None) or "magaza 1").strip()
+            if d not in grouped_items:
+                grouped_items[d] = []
+            grouped_items[d].append(item)
+
+        template = jinja_env.get_template("invoice_magaza_template.html")
+        return template.render(
+            invoice=invoice,
+            grouped_items=grouped_items,
             company_name=company,
             company_address=settings.company_address,
             company_phone=settings.company_phone,
@@ -354,7 +392,7 @@ class PDFGenerator:
         invoice: ConsolidatedInvoice,
         output_filename: Optional[str] = None,
     ) -> Path:
-        """Synchronously generate PDF invoice file from ConsolidatedInvoice data.
+        """Synchronously generate standard PDF invoice file from ConsolidatedInvoice data.
 
         Args:
             invoice: Consolidated invoice data.
@@ -393,10 +431,223 @@ class PDFGenerator:
         invoice: ConsolidatedInvoice,
         output_filename: Optional[str] = None,
     ) -> Path:
-        """Asynchronously generate PDF invoice file without blocking the event loop.
+        """Asynchronously generate standard PDF invoice file without blocking event loop."""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None, self.generate_pdf_sync, invoice, output_filename
+        )
+
+    def _compile_magaza_with_reportlab(
+        self, invoice: ConsolidatedInvoice, output_path: Path
+    ) -> bool:
+        """Compile a Magaza-grouped A4 PDF invoice directly using ReportLab matching reference style."""
+        try:
+            from collections import OrderedDict
+            from reportlab.lib.pagesizes import A4
+            from reportlab.lib import colors
+            from reportlab.platypus import (
+                SimpleDocTemplate,
+                Paragraph,
+                Spacer,
+                Table,
+                TableStyle,
+                HRFlowable,
+                Image as RLImage,
+            )
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
+            from consolidator import split_dimension_and_brand
+
+            self._register_fonts()
+
+            doc = SimpleDocTemplate(
+                str(output_path),
+                pagesize=A4,
+                rightMargin=40,
+                leftMargin=40,
+                topMargin=35,
+                bottomMargin=35,
+            )
+
+            styles = getSampleStyleSheet()
+
+            s_company_line = ParagraphStyle(
+                "MCompanyLine", parent=styles["Normal"],
+                fontName="Arial", fontSize=9.5, leading=13.5, textColor=colors.black
+            )
+            s_facture_title = ParagraphStyle(
+                "MFactureTitle", parent=styles["Normal"],
+                fontName="Arial-Bold", fontSize=18, leading=22, textColor=colors.black, alignment=TA_RIGHT
+            )
+            s_section_hdr = ParagraphStyle(
+                "MSectionHdr", parent=styles["Normal"],
+                fontName="Arial-Bold", fontSize=12, leading=16, textColor=colors.black
+            )
+            s_client_line = ParagraphStyle(
+                "MClientLine", parent=styles["Normal"],
+                fontName="Arial", fontSize=10, leading=14, textColor=colors.black
+            )
+            s_magaza_title = ParagraphStyle(
+                "MMagazaTitle", parent=styles["Normal"],
+                fontName="Arial-Bold", fontSize=13, leading=17, textColor=colors.black
+            )
+            s_th = ParagraphStyle(
+                "MTH", parent=styles["Normal"],
+                fontName="Arial-Bold", fontSize=9, leading=12, textColor=colors.black
+            )
+            s_td = ParagraphStyle(
+                "MTD", parent=styles["Normal"],
+                fontName="Arial", fontSize=9, leading=12, textColor=colors.black
+            )
+            s_tot_lbl = ParagraphStyle(
+                "MTotLbl", parent=styles["Normal"],
+                fontName="Arial-Bold", fontSize=10, leading=14, textColor=colors.black
+            )
+            s_tot_val = ParagraphStyle(
+                "MTotVal", parent=styles["Normal"],
+                fontName="Arial-Bold", fontSize=10, leading=14, textColor=colors.black, alignment=TA_RIGHT
+            )
+
+            story = []
+            page_width = A4[0] - 80  # 40+40 margins
+
+            # Group Items by Depot
+            grouped_items: Dict[str, List[Any]] = OrderedDict()
+            for item in invoice.items:
+                d = (getattr(item, "depot", None) or "magaza 1").strip()
+                if d not in grouped_items:
+                    grouped_items[d] = []
+                grouped_items[d].append(item)
+
+            col_widths = [
+                page_width * 0.23,   # Référence
+                page_width * 0.12,   # Marque
+                page_width * 0.13,   # Dépôt
+                page_width * 0.12,   # Quantité
+                page_width * 0.20,   # Prix unitaire (MAD)
+                page_width * 0.20,   # Total (MAD)
+            ]
+
+            for depot_name, items_list in grouped_items.items():
+                story.append(Paragraph(f"<b>{depot_name}</b>", s_magaza_title))
+                story.append(Spacer(1, 4))
+
+                table_data = [[
+                    Paragraph("<b>Référence</b>", s_th),
+                    Paragraph("<b>Marque</b>", s_th),
+                    Paragraph("<b>Dépôt</b>", s_th),
+                    Paragraph("<b>Quantité</b>", s_th),
+                    Paragraph(f"<b>Prix unitaire ({settings.currency})</b>", s_th),
+                    Paragraph(f"<b>Total ({settings.currency})</b>", s_th),
+                ]]
+
+                for item in items_list:
+                    raw_ref = item.reference or item.description
+                    brand_text = item.brand or ""
+                    dim, parsed_brand = split_dimension_and_brand(raw_ref)
+                    ref_text = dim or raw_ref
+                    final_brand = brand_text or parsed_brand or ""
+                    item_depot = getattr(item, "depot", None) or depot_name
+
+                    table_data.append([
+                        Paragraph(ref_text, s_td),
+                        Paragraph(final_brand, s_td),
+                        Paragraph(item_depot, s_td),
+                        Paragraph(str(item.quantity), s_td),
+                        Paragraph(f"{item.unit_price:.2f}", s_td),
+                        Paragraph(f"{item.subtotal:.2f}", s_td),
+                    ])
+
+                magaza_table = Table(table_data, colWidths=col_widths, repeatRows=1)
+                magaza_table.setStyle(TableStyle([
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EDEDED")),
+                    ("BACKGROUND", (0, 1), (-1, -1), colors.white),
+                    ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
+                    ("TOPPADDING", (0, 0), (-1, 0), 6),
+                    ("TOPPADDING", (0, 1), (-1, -1), 5),
+                    ("BOTTOMPADDING", (0, 1), (-1, -1), 5),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 7),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("GRID", (0, 0), (-1, -1), 0.75, colors.HexColor("#444444")),
+                    ("BOX", (0, 0), (-1, -1), 1.0, colors.black),
+                ]))
+                story.append(magaza_table)
+                story.append(Spacer(1, 12))
+
+            # Grand Total Summary Bar
+            total_table = Table([
+                [
+                    Paragraph(f"<b>Total Pièces : {invoice.total_quantity} pcs</b>", s_tot_lbl),
+                    Paragraph(f"<b>Montant Total Global : {invoice.grand_total:.2f} {settings.currency}</b>", s_tot_val),
+                ]
+            ], colWidths=[page_width * 0.5, page_width * 0.5])
+            total_table.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8F9FA")),
+                ("BOX", (0, 0), (-1, -1), 1.2, colors.black),
+                ("TOPPADDING", (0, 0), (-1, -1), 7),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ]))
+            story.append(Spacer(1, 6))
+            story.append(total_table)
+
+            doc.build(story)
+            logger.info(f"Generated clean Magaza PDF with ReportLab: {output_path}")
+            return True
+        except Exception as e:
+            logger.error(f"ReportLab Magaza compilation failed: {e}", exc_info=True)
+            return False
+
+    def generate_magaza_pdf_sync(
+        self,
+        invoice: ConsolidatedInvoice,
+        output_filename: Optional[str] = None,
+    ) -> Path:
+        """Synchronously generate Magaza-grouped PDF invoice file.
 
         Args:
-            invoice: Consolidated invoice data.
+            invoice: Consolidated invoice data with depots.
+            output_filename: Optional custom filename.
+
+        Returns:
+            Path to the saved PDF file.
+        """
+        settings.setup_directories()
+
+        sanitized_ref = invoice.invoice_ref.replace("#", "").replace("/", "_").strip()
+        filename = output_filename or f"Facture_Magaza_{sanitized_ref}.pdf"
+        output_path = settings.output_dir / filename
+
+        html_content = self.render_magaza_html(invoice)
+
+        # 1. Try WeasyPrint
+        if self._compile_with_weasyprint(html_content, output_path):
+            return output_path
+
+        # 2. Try ReportLab
+        if self._compile_magaza_with_reportlab(invoice, output_path):
+            return output_path
+
+        # 3. Try xhtml2pdf
+        if self._compile_with_xhtml2pdf(html_content, output_path):
+            return output_path
+
+        raise RuntimeError(
+            f"Failed to generate Magaza PDF for invoice {invoice.invoice_ref} with all engines."
+        )
+
+    async def generate_magaza_pdf(
+        self,
+        invoice: ConsolidatedInvoice,
+        output_filename: Optional[str] = None,
+    ) -> Path:
+        """Asynchronously generate Magaza-grouped PDF invoice file.
+
+        Args:
+            invoice: Consolidated invoice data with depots.
             output_filename: Optional custom filename.
 
         Returns:
@@ -404,7 +655,7 @@ class PDFGenerator:
         """
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
-            None, self.generate_pdf_sync, invoice, output_filename
+            None, self.generate_magaza_pdf_sync, invoice, output_filename
         )
 
 

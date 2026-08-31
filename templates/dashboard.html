@@ -49,6 +49,10 @@
                     <span class="nav-icon"><i data-lucide="scan-line"></i></span>
                     <span>Numérisation & Scan</span>
                 </a>
+                <a href="#magaza" class="nav-item" data-tab="magaza">
+                    <span class="nav-icon"><i data-lucide="warehouse"></i></span>
+                    <span>Scan par Dépôt</span>
+                </a>
                 <a href="#archive" class="nav-item" data-tab="archive">
                     <span class="nav-icon"><i data-lucide="folder-archive"></i></span>
                     <span>Historique Factures</span>
@@ -220,22 +224,12 @@
                             <!-- Preview Grid -->
                             <div class="preview-grid" id="preview-grid"></div>
 
-                            <!-- Input form fields & actions in one single line -->
-                            <div class="form-row" style="margin-top: 20px; display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap;">
-                                <div class="form-group" style="flex: 1; min-width: 220px;">
-                                    <label class="form-label">Nom du Client / Garage (Optionnel)</label>
-                                    <input type="text" id="client-name-input" class="form-input" placeholder="ex: Garage Al Amal Casablanca">
-                                </div>
-                                <div class="form-group" style="flex: 1; min-width: 220px;">
-                                    <label class="form-label">Adresse du Client (Optionnel)</label>
-                                    <input type="text" id="client-address-input" class="form-input" placeholder="ex: Sidi Bennour, Maroc">
-                                </div>
-                                <div style="display: flex; gap: 8px; align-items: center; flex-shrink: 0;">
-                                    <button class="btn btn-secondary" id="clear-files-btn" style="display: none;" title="Effacer"><i data-lucide="trash-2"></i></button>
-                                    <button class="btn btn-primary" id="start-scan-btn" disabled style="white-space: nowrap; height: 42px;">
-                                        <i data-lucide="scan"></i> <span>Lancer la Numérisation & Facturation</span>
-                                    </button>
-                                </div>
+                            <!-- Actions bar -->
+                            <div style="margin-top: 20px; display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
+                                <button class="btn btn-secondary" id="clear-files-btn" style="display: none;" title="Effacer"><i data-lucide="trash-2"></i> Effacer</button>
+                                <button class="btn btn-primary" id="start-scan-btn" disabled style="white-space: nowrap; height: 42px; padding: 0 24px;">
+                                    <i data-lucide="scan"></i> <span>Lancer la Numérisation & Facturation</span>
+                                </button>
                             </div>
 
                             <!-- Progress Stepper -->
@@ -257,6 +251,7 @@
                                     <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;" id="results-summary-text"></div>
                                 </div>
                                 <div style="display: flex; gap: 8px;">
+                                    <button class="btn btn-secondary btn-sm" id="view-source-photos-btn" style="display: none;"><i data-lucide="image"></i> Voir les Photos (<span id="source-photos-count">0</span>)</button>
                                     <button class="btn btn-secondary btn-sm" id="preview-pdf-btn"><i data-lucide="eye"></i> Aperçu PDF</button>
                                     <button class="btn btn-emerald btn-sm" id="download-pdf-btn"><i data-lucide="download"></i> Télécharger PDF</button>
                                 </div>
@@ -323,7 +318,135 @@
                 </section>
 
 
-                <!-- 3. ARCHIVE TAB -->
+                <!-- 3. SCAN BY DEPOT (MAGAZA) TAB -->
+                <section class="tab-pane" id="tab-magaza">
+                    <div class="scanner-container">
+                        
+                        <!-- Missing API Key Warning Banner -->
+                        <div id="magaza-api-warning" style="display: none; margin-bottom: 20px; padding: 14px 18px; background: rgba(239, 68, 68, 0.12); border: 1px solid var(--accent-rose); border-radius: 8px; color: var(--accent-rose); align-items: center; justify-content: space-between;">
+                            <div>
+                                <span style="font-weight: 700;"><i data-lucide="alert-triangle"></i> Clé de service non configurée !</span>
+                                <span style="font-size: 13px; margin-left: 8px; opacity: 0.9;">La numérisation automatique nécessite une clé d'accès configurée.</span>
+                            </div>
+                            <button class="btn btn-rose btn-sm" id="goto-settings-btn-magaza"><i data-lucide="settings-2"></i> Configurer la Clé</button>
+                        </div>
+
+                        <!-- Upload Card -->
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title"><i data-lucide="warehouse"></i> Importer des Bons & Répartir par Dépôt (Magaza 1, 2, 3, 4)</div>
+                            </div>
+
+                            <!-- Drag and drop zone -->
+                            <div class="dropzone-box" id="dropzone-magaza">
+                                <input type="file" id="file-input-magaza" class="file-input-hidden" multiple accept="image/*">
+                                <div class="dropzone-icon"><i data-lucide="upload-cloud"></i></div>
+                                <div class="dropzone-title">Glissez & déposez vos photos de bons ici</div>
+                                <div class="dropzone-subtitle">Prend en charge les formats JPG, PNG, WebP (Multi-sélection autorisée)</div>
+                            </div>
+
+                            <!-- Preview Grid -->
+                            <div class="preview-grid" id="preview-grid-magaza"></div>
+
+                            <!-- Actions bar -->
+                            <div style="margin-top: 20px; display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
+                                <button class="btn btn-secondary" id="clear-files-btn-magaza" style="display: none;" title="Effacer"><i data-lucide="trash-2"></i> Effacer</button>
+                                <button class="btn btn-primary" id="start-scan-btn-magaza" disabled style="white-space: nowrap; height: 42px; padding: 0 24px;">
+                                    <i data-lucide="scan"></i> <span>Numériser & Générer par Dépôt</span>
+                                </button>
+                            </div>
+
+                            <!-- Progress Stepper -->
+                            <div class="progress-stepper" id="progress-stepper-magaza">
+                                <div class="stepper-header">
+                                    <span id="stepper-label-magaza"><i data-lucide="loader-2"></i> Traitement et affectation par dépôt en cours...</span>
+                                </div>
+                                <div class="progress-bar-track">
+                                    <div class="progress-bar-fill" id="progress-bar-fill-magaza"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Results & Live Edit Card -->
+                        <div class="card results-card" id="results-card-magaza" style="display: none;">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title" id="results-ref-title-magaza">Facture par Dépôt Consolidée</div>
+                                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;" id="results-summary-text-magaza"></div>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="btn btn-secondary btn-sm" id="view-source-photos-btn-magaza" style="display: none;"><i data-lucide="image"></i> Voir les Photos (<span id="source-photos-count-magaza">0</span>)</button>
+                                    <button class="btn btn-secondary btn-sm" id="preview-pdf-btn-magaza"><i data-lucide="eye"></i> Aperçu PDF Dépôt</button>
+                                    <button class="btn btn-emerald btn-sm" id="download-pdf-btn-magaza"><i data-lucide="download"></i> Télécharger PDF</button>
+                                </div>
+                            </div>
+
+                            <!-- Client Info Edit Row -->
+                            <div class="form-row" style="display: flex; gap: 14px; margin-bottom: 14px;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label class="form-label">Client</label>
+                                    <input type="text" id="edit-client-name-magaza" class="form-input" placeholder="Nom du client">
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label class="form-label">Adresse Client</label>
+                                    <input type="text" id="edit-client-address-magaza" class="form-input" placeholder="Adresse">
+                                </div>
+                                <div class="form-group" style="flex: 0.7;">
+                                    <label class="form-label">Statut</label>
+                                    <select id="edit-transaction-status-magaza" class="form-select">
+                                        <option value="En attente">En attente</option>
+                                        <option value="Validé">Validé</option>
+                                        <option value="Payé">Payé</option>
+                                        <option value="Livré">Livré</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Editable Table with Magaza Dropdown -->
+                            <div class="data-table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 4%; text-align: center;">#</th>
+                                            <th style="width: 24%;">Référence</th>
+                                            <th style="width: 20%;">Marque (Sélection)</th>
+                                            <th style="width: 17%; color: var(--accent-blue);">Dépôt (Magaza)</th>
+                                            <th style="width: 11%;">Quantité</th>
+                                            <th style="width: 12%;">Prix Unitaire</th>
+                                            <th style="width: 12%;">Sous-Total</th>
+                                            <th style="width: 5%; text-align: center;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="results-table-body-magaza">
+                                        <!-- Editable rows rendered dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Table Controls & Totals -->
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 14px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <button class="btn btn-secondary btn-sm" id="add-row-btn-magaza"><i data-lucide="plus"></i> Ajouter une ligne</button>
+                                    <div id="magaza-pills-container" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
+                                </div>
+                                
+                                <div style="display: flex; align-items: center; gap: 20px;">
+                                    <div style="font-size: 13px; font-weight: 700; color: var(--text-secondary);">
+                                        Total Pièces : <span id="results-total-qty-magaza" style="color: var(--accent-blue);">0 pcs</span>
+                                    </div>
+                                    <div style="font-size: 16px; font-weight: 800; color: var(--text-primary);">
+                                        Montant Total : <span id="results-grand-total-magaza" style="color: var(--accent-emerald);">0.00 DH</span>
+                                    </div>
+                                    <button class="btn btn-primary" id="recalculate-btn-magaza"><i data-lucide="save"></i> Enregistrer & Régénérer PDF</button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+
+                <!-- 4. ARCHIVE TAB -->
                 <section class="tab-pane" id="tab-archive">
                     <div class="card">
                         <div class="card-header">
@@ -361,99 +484,23 @@
                 <section class="tab-pane" id="tab-settings">
                     <div style="max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px;">
                         
-                        <!-- CARD 1: AI & Vision Engine Service -->
+                        <!-- CARD 1: AI Key Configuration -->
                         <div class="card">
                             <div class="card-header">
-                                <div class="card-title"><i data-lucide="cpu"></i> Moteur d'Extraction & Clés d'Accès</div>
-                                <span class="table-badge source-web" id="active-service-badge" style="font-size: 11px;">Service Actif</span>
+                                <div class="card-title"><i data-lucide="key"></i> Clé API Google Gemini</div>
+                                <span class="table-badge source-web" id="gemini-status-badge">Vérification...</span>
                             </div>
 
-                            <div style="display: flex; flex-direction: column; gap: 16px;">
-                                <div>
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                        <label class="form-label" style="font-weight: 700; font-size: 13px; margin-bottom: 0;">Mode d'Extraction Multimodal</label>
-                                        <span style="font-size: 11.5px; color: var(--accent-emerald); font-weight: 600;">
-                                            <i data-lucide="shield-check"></i> Basculement automatique Gemini ➔ OpenRouter actif
-                                        </span>
+                            <div style="display: flex; flex-direction: column; gap: 14px;">
+                                <div class="form-group">
+                                    <label class="form-label" style="font-weight: 700;">Ajouter / Modifier la Clé API Gemini</label>
+                                    <div style="display: flex; gap: 8px; margin-top: 4px;">
+                                        <input type="password" id="settings-gemini-key" class="form-input" placeholder="Collez votre nouvelle clé Gemini ici...">
+                                        <button class="btn btn-secondary" id="toggle-gemini-key-btn" type="button" title="Afficher/Masquer"><i data-lucide="eye"></i></button>
+                                        <button class="btn btn-secondary" id="test-gemini-key-btn" type="button"><i data-lucide="flask-conical"></i> Tester</button>
                                     </div>
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                                        <label class="provider-card active" id="provider-gemini-label">
-                                            <input type="radio" name="ai_provider" value="gemini" id="provider-gemini" checked>
-                                            <div>
-                                                <div style="font-weight: 700; font-size: 13px;"><i data-lucide="zap"></i> Google Gemini (Principal)</div>
-                                                <div style="font-size: 11px; color: var(--text-muted);">Moteur principal • Rapide & Précis</div>
-                                            </div>
-                                        </label>
-                                        <label class="provider-card" id="provider-deepseek-label">
-                                            <input type="radio" name="ai_provider" value="deepseek" id="provider-deepseek">
-                                            <div>
-                                                <div style="font-weight: 700; font-size: 13px;"><i data-lucide="globe"></i> OpenRouter (Secours / Dédié)</div>
-                                                <div style="font-size: 11px; color: var(--text-muted);">Relais automatique si Gemini indisponible</div>
-                                            </div>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <!-- Gemini Configuration Panel -->
-                                <div id="gemini-config-panel" class="panel-subcard">
-                                    <div class="form-group">
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <label class="form-label">Clé API Google Gemini</label>
-                                            <span class="table-badge source-web" id="gemini-status-badge">Vérification...</span>
-                                        </div>
-                                        <div style="display: flex; gap: 8px; margin-top: 4px;">
-                                            <input type="password" id="settings-gemini-key" class="form-input" placeholder="AIzaSy... (Saisissez votre clé Gemini)">
-                                            <button class="btn btn-secondary" id="toggle-gemini-key-btn" type="button" title="Afficher/Masquer"><i data-lucide="eye"></i></button>
-                                            <button class="btn btn-secondary" id="test-gemini-key-btn" type="button"><i data-lucide="flask-conical"></i> Tester</button>
-                                        </div>
-                                        <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 5px;" id="gemini-key-hint">
-                                            Obtenez gratuitement une clé sur <a href="https://aistudio.google.com/" target="_blank" style="color: var(--accent-blue);">Google AI Studio</a>.
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group" style="margin-top: 6px;">
-                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                            <label class="form-label" style="margin-bottom: 0;">Modèle Gemini</label>
-                                            <button type="button" class="btn btn-secondary btn-sm" id="refresh-gemini-models-btn" style="padding: 2px 8px; font-size: 11px;">
-                                                <i data-lucide="refresh-cw"></i> Détecter modèles
-                                            </button>
-                                        </div>
-                                        <select id="settings-gemini-model" class="form-select">
-                                            <option value="gemini-2.5-flash">gemini-2.5-flash (Recommandé • Très rapide)</option>
-                                            <option value="gemini-2.0-flash">gemini-2.0-flash</option>
-                                            <option value="gemini-1.5-flash">gemini-1.5-flash</option>
-                                            <option value="gemini-1.5-pro">gemini-1.5-pro</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <!-- OpenRouter Configuration Panel -->
-                                <div id="deepseek-config-panel" class="panel-subcard" style="display: none;">
-                                    <div class="form-group">
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <label class="form-label">Clé API OpenRouter</label>
-                                            <span class="table-badge source-web" id="deepseek-status-badge">Non configuré</span>
-                                        </div>
-                                        <div style="display: flex; gap: 8px; margin-top: 4px;">
-                                            <input type="password" id="settings-deepseek-key" class="form-input" placeholder="sk-or-v1-... (Collez votre clé OpenRouter)">
-                                            <button class="btn btn-secondary" id="toggle-deepseek-key-btn" type="button" title="Afficher/Masquer"><i data-lucide="eye"></i></button>
-                                            <button class="btn btn-secondary" id="test-deepseek-key-btn" type="button"><i data-lucide="flask-conical"></i> Tester</button>
-                                        </div>
-                                        <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 5px;" id="deepseek-key-hint">
-                                            Obtenez une clé sur <a href="https://openrouter.ai/keys" target="_blank" style="color: var(--accent-blue);">openrouter.ai/keys</a>.
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group" style="margin-top: 6px;">
-                                        <label class="form-label">Modèle Vision OpenRouter</label>
-                                        <select id="settings-deepseek-model" class="form-select">
-                                            <option value="google/gemini-3.1-flash-lite-image">google/gemini-3.1-flash-lite-image (Recommandé • Ultra Économique & Rapide)</option>
-                                            <option value="google/gemini-2.5-flash-image">google/gemini-2.5-flash-image (Vision Rapide)</option>
-                                            <option value="qwen/qwen3-vl-8b-instruct">qwen/qwen3-vl-8b-instruct (Économique)</option>
-                                            <option value="qwen/qwen2.5-vl-72b-instruct">qwen/qwen2.5-vl-72b-instruct (Haute Précision)</option>
-                                            <option value="openrouter/free">openrouter/free (Routeur Gratuit Vision)</option>
-                                        </select>
-                                        <input type="hidden" id="settings-deepseek-base-url" value="https://openrouter.ai/api/v1">
+                                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;" id="gemini-key-hint">
+                                        Moteur d'extraction actif : <b>Google Gemini Vision (Rapide)</b>. Obtenez une clé gratuitement sur <a href="https://aistudio.google.com/" target="_blank" style="color: var(--accent-blue); font-weight: 600;">Google AI Studio</a>.
                                     </div>
                                 </div>
                             </div>
@@ -576,13 +623,32 @@
         </div>
     </div>
 
-    <!-- Image Lightbox Preview Modal -->
+    <!-- Enhanced Image Lightbox Preview Modal -->
     <div class="image-lightbox" id="image-lightbox" style="display: none;">
         <button class="lightbox-close" id="lightbox-close" title="Fermer (Échap)">&times;</button>
-        <div class="lightbox-content">
-            <img id="lightbox-img" src="" alt="Aperçu du bon de commande">
-            <div class="lightbox-caption" id="lightbox-caption"></div>
+        
+        <!-- Lightbox Toolbar -->
+        <div class="lightbox-toolbar">
+            <span class="lightbox-counter" id="lightbox-counter">Photo 1 / 1</span>
+            <div class="lightbox-tools">
+                <button class="lightbox-tool-btn" id="lightbox-zoom-out" title="Zoom arrière (-)"><i data-lucide="zoom-out"></i></button>
+                <button class="lightbox-tool-btn" id="lightbox-zoom-reset" title="Taille réelle (100%)"><i data-lucide="maximize-2"></i></button>
+                <button class="lightbox-tool-btn" id="lightbox-zoom-in" title="Zoom avant (+)"><i data-lucide="zoom-in"></i></button>
+                <button class="lightbox-tool-btn" id="lightbox-rotate" title="Pivoter 90°"><i data-lucide="rotate-cw"></i></button>
+            </div>
         </div>
+
+        <button class="lightbox-nav-btn prev" id="lightbox-prev" title="Photo précédente (←)"><i data-lucide="chevron-left"></i></button>
+        
+        <div class="lightbox-content-viewport" id="lightbox-viewport">
+            <div class="lightbox-content" id="lightbox-content">
+                <img id="lightbox-img" src="" alt="Aperçu du bon de commande">
+            </div>
+        </div>
+
+        <div class="lightbox-caption" id="lightbox-caption"></div>
+
+        <button class="lightbox-nav-btn next" id="lightbox-next" title="Photo suivante (→)"><i data-lucide="chevron-right"></i></button>
     </div>
 
     <!-- Frontend Script -->

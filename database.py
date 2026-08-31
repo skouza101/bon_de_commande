@@ -58,6 +58,7 @@ class Database:
                     description TEXT NOT NULL,
                     reference TEXT DEFAULT '',
                     brand TEXT DEFAULT '',
+                    depot TEXT DEFAULT 'magaza 1',
                     quantity INTEGER NOT NULL,
                     unit_price REAL NOT NULL,
                     subtotal REAL NOT NULL,
@@ -95,6 +96,8 @@ class Database:
                 cursor.execute("ALTER TABLE invoice_items ADD COLUMN reference TEXT DEFAULT ''")
             if "brand" not in item_cols:
                 cursor.execute("ALTER TABLE invoice_items ADD COLUMN brand TEXT DEFAULT ''")
+            if "depot" not in item_cols:
+                cursor.execute("ALTER TABLE invoice_items ADD COLUMN depot TEXT DEFAULT 'magaza 1'")
 
             conn.commit()
 
@@ -188,11 +191,12 @@ class Database:
 
             # Insert line items
             for item in invoice.items:
+                depot_val = getattr(item, "depot", None) or "magaza 1"
                 cursor.execute(
                     """
                     INSERT INTO invoice_items (
-                        invoice_id, index_num, description, reference, brand, quantity, unit_price, subtotal
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        invoice_id, index_num, description, reference, brand, depot, quantity, unit_price, subtotal
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         invoice_id,
@@ -200,6 +204,7 @@ class Database:
                         item.description,
                         item.reference or item.description,
                         item.brand or "",
+                        depot_val,
                         item.quantity,
                         item.unit_price,
                         item.subtotal,

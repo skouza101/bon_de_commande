@@ -158,6 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabHeaders = {
         dashboard: { title: "Tableau de Bord & Métriques", sub: "Vue d'ensemble de l'activité, chiffre d'affaires et statistiques pneumatiques" },
         scanner: { title: "Numérisation & Consolidation", sub: "Importez vos photos de bons manuscrits et générez vos factures A4" },
+        magaza: { title: "Numérisation & Répartition par Dépôt", sub: "Importez vos photos de bons et affectez chaque article aux dépôts (magaza 1, 2, 3, 4)" },
         archive: { title: "Historique des Factures", sub: "Consultez, téléchargez et gérez toutes les factures consolidées" },
         settings: { title: "Paramètres & Configuration", sub: "Personnalisation des mentions légales, fournisseur IA et clés d'accès" },
     };
@@ -181,6 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (tabId === 'dashboard') loadAnalytics();
         if (tabId === 'scanner') checkScannerKeyStatus();
+        if (tabId === 'magaza') checkMagazaKeyStatus();
         if (tabId === 'archive') loadInvoices();
         if (tabId === 'settings') loadSettings();
     }
@@ -198,6 +200,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const gotoSettingsBtnMagaza = document.getElementById('goto-settings-btn-magaza');
+    if (gotoSettingsBtnMagaza) {
+        gotoSettingsBtnMagaza.addEventListener('click', () => {
+            switchTab('settings');
+        });
+    }
+
     function checkScannerKeyStatus() {
         const isConfigured = (state.aiProvider === 'deepseek') ? state.deepseekConfigured : state.geminiConfigured;
         if (!isConfigured) {
@@ -209,6 +218,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else {
             scannerApiWarning.style.display = 'none';
+        }
+    }
+
+    function checkMagazaKeyStatus() {
+        const isConfigured = (state.aiProvider === 'deepseek') ? state.deepseekConfigured : state.geminiConfigured;
+        const magazaApiWarning = document.getElementById('magaza-api-warning');
+        if (!magazaApiWarning) return;
+        if (!isConfigured) {
+            magazaApiWarning.style.display = 'flex';
+            const warningText = magazaApiWarning.querySelector('div span:last-child');
+            if (warningText) {
+                const providerName = state.aiProvider === 'deepseek' ? 'DeepSeek AI' : 'Google Gemini';
+                warningText.innerHTML = `<b>Clé d'accès ${providerName} non configurée</b> — Veuillez renseigner votre clé dans l'onglet Paramètres.`;
+            }
+        } else {
+            magazaApiWarning.style.display = 'none';
         }
     }
 
@@ -308,38 +333,164 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Image Lightbox Elements
+    // ----------------------------------------------------------------------
+    // Enhanced Image Lightbox Gallery Controller
+    // ----------------------------------------------------------------------
     const imageLightbox = document.getElementById('image-lightbox');
     const lightboxImg = document.getElementById('lightbox-img');
+    const lightboxContent = document.getElementById('lightbox-content');
     const lightboxCaption = document.getElementById('lightbox-caption');
     const lightboxClose = document.getElementById('lightbox-close');
+    const lightboxPrev = document.getElementById('lightbox-prev');
+    const lightboxNext = document.getElementById('lightbox-next');
+    const lightboxCounter = document.getElementById('lightbox-counter');
+    const lightboxZoomIn = document.getElementById('lightbox-zoom-in');
+    const lightboxZoomOut = document.getElementById('lightbox-zoom-out');
+    const lightboxZoomReset = document.getElementById('lightbox-zoom-reset');
+    const lightboxRotate = document.getElementById('lightbox-rotate');
+
+    let currentGallery = [];
+    let currentGalleryIndex = 0;
+    let currentScale = 1.0;
+    let currentRotation = 0;
+
+    function updateLightboxTransform() {
+        if (!lightboxContent) return;
+        lightboxContent.style.transform = `scale(${currentScale}) rotate(${currentRotation}deg)`;
+    }
+
+    function renderActiveGalleryImage() {
+        if (!imageLightbox || currentGallery.length === 0) return;
+        const item = currentGallery[currentGalleryIndex];
+        if (!item) return;
+
+        currentScale = 1.0;
+        currentRotation = 0;
+        updateLightboxTransform();
+
+        lightboxImg.src = item.url;
+        if (lightboxCaption) {
+            lightboxCaption.textContent = item.caption || item.name || 'Aperçu du bon de commande';
+        }
+
+        if (lightboxCounter) {
+            lightboxCounter.textContent = `Photo ${currentGalleryIndex + 1} / ${currentGallery.length}`;
+        }
+
+        if (lightboxPrev && lightboxNext) {
+            lightboxPrev.style.display = currentGallery.length > 1 ? 'flex' : 'none';
+            lightboxNext.style.display = currentGallery.length > 1 ? 'flex' : 'none';
+        }
+        refreshIcons();
+    }
+
+    function openGallery(items, startIndex = 0) {
+        if (!items || items.length === 0 || !imageLightbox) return;
+        currentGallery = items;
+        currentGalleryIndex = Math.max(0, Math.min(startIndex, items.length - 1));
+        renderActiveGalleryImage();
+        imageLightbox.style.display = 'flex';
+        refreshIcons();
+    }
 
     function openImageLightbox(src, caption) {
-        if (!imageLightbox || !lightboxImg) return;
-        lightboxImg.src = src;
-        if (lightboxCaption) {
-            lightboxCaption.textContent = caption || 'Aperçu du bon de commande';
-        }
-        imageLightbox.style.display = 'flex';
+        openGallery([{ url: src, caption: caption, name: 'Aperçu' }], 0);
     }
 
     function closeImageLightbox() {
         if (!imageLightbox) return;
         imageLightbox.style.display = 'none';
         if (lightboxImg) lightboxImg.src = '';
+        currentGallery = [];
+        currentScale = 1.0;
+        currentRotation = 0;
+    }
+
+    if (lightboxPrev) {
+        lightboxPrev.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (currentGallery.length > 1) {
+                currentGalleryIndex = (currentGalleryIndex - 1 + currentGallery.length) % currentGallery.length;
+                renderActiveGalleryImage();
+            }
+        });
+    }
+
+    if (lightboxNext) {
+        lightboxNext.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (currentGallery.length > 1) {
+                currentGalleryIndex = (currentGalleryIndex + 1) % currentGallery.length;
+                renderActiveGalleryImage();
+            }
+        });
+    }
+
+    if (lightboxZoomIn) {
+        lightboxZoomIn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentScale = Math.min(currentScale + 0.25, 3.5);
+            updateLightboxTransform();
+        });
+    }
+
+    if (lightboxZoomOut) {
+        lightboxZoomOut.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentScale = Math.max(currentScale - 0.25, 0.5);
+            updateLightboxTransform();
+        });
+    }
+
+    if (lightboxZoomReset) {
+        lightboxZoomReset.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentScale = 1.0;
+            currentRotation = 0;
+            updateLightboxTransform();
+        });
+    }
+
+    if (lightboxRotate) {
+        lightboxRotate.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentRotation = (currentRotation + 90) % 360;
+            updateLightboxTransform();
+        });
     }
 
     if (lightboxClose) {
         lightboxClose.addEventListener('click', closeImageLightbox);
     }
+
     if (imageLightbox) {
         imageLightbox.addEventListener('click', (e) => {
-            if (e.target === imageLightbox) closeImageLightbox();
+            if (e.target === imageLightbox || e.target.id === 'lightbox-viewport') {
+                closeImageLightbox();
+            }
         });
     }
+
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && imageLightbox && imageLightbox.style.display === 'flex') {
-            closeImageLightbox();
+        if (imageLightbox && imageLightbox.style.display === 'flex') {
+            if (e.key === 'Escape') {
+                closeImageLightbox();
+            } else if (e.key === 'ArrowLeft' && currentGallery.length > 1) {
+                currentGalleryIndex = (currentGalleryIndex - 1 + currentGallery.length) % currentGallery.length;
+                renderActiveGalleryImage();
+            } else if (e.key === 'ArrowRight' && currentGallery.length > 1) {
+                currentGalleryIndex = (currentGalleryIndex + 1) % currentGallery.length;
+                renderActiveGalleryImage();
+            } else if (e.key === '+' || e.key === '=') {
+                currentScale = Math.min(currentScale + 0.25, 3.5);
+                updateLightboxTransform();
+            } else if (e.key === '-') {
+                currentScale = Math.max(currentScale - 0.25, 0.5);
+                updateLightboxTransform();
+            } else if (e.key === 'r' || e.key === 'R') {
+                currentRotation = (currentRotation + 90) % 360;
+                updateLightboxTransform();
+            }
         }
     });
 
@@ -360,15 +511,20 @@ document.addEventListener('DOMContentLoaded', () => {
         state.selectedFiles.forEach((file, index) => {
             const card = document.createElement('div');
             card.className = 'preview-card';
-            card.title = 'Cliquer pour agrandir la photo';
+            card.title = 'Cliquer pour agrandir et zoomer sur la photo';
             
             const objectUrl = URL.createObjectURL(file);
             const img = document.createElement('img');
             img.src = objectUrl;
 
-            // Click card to open full lightbox preview
+            // Click card to open gallery starting at this index
             card.addEventListener('click', () => {
-                openImageLightbox(objectUrl, `${file.name} (${(file.size / 1024).toFixed(1)} Ko)`);
+                const gallery = state.selectedFiles.map(f => ({
+                    url: URL.createObjectURL(f),
+                    name: f.name,
+                    caption: `${f.name} (${(f.size / 1024).toFixed(1)} Ko)`,
+                }));
+                openGallery(gallery, index);
             });
 
             const removeBtn = document.createElement('button');
@@ -388,9 +544,16 @@ document.addEventListener('DOMContentLoaded', () => {
         refreshIcons();
     }
 
+    if (dropzone && fileInput) {
+        dropzone.addEventListener('click', (e) => {
+            if (e.target !== fileInput) fileInput.click();
+        });
+    }
+
     fileInput.addEventListener('change', (e) => {
         const files = Array.from(e.target.files);
         state.selectedFiles = [...state.selectedFiles, ...files];
+        fileInput.value = '';
         updateFilePreviews();
     });
 
@@ -430,8 +593,12 @@ document.addEventListener('DOMContentLoaded', () => {
         progressStepper.style.display = 'block';
         resultsCard.style.display = 'none';
 
+        const fileCount = state.selectedFiles.length;
+        let elapsed = 0;
+        let progressInterval = null;
+
         // Stage 1: Uploading
-        stepperLabel.innerHTML = `<i data-lucide="upload-cloud"></i> Téléversement de ${state.selectedFiles.length} photo(s)...`;
+        stepperLabel.innerHTML = `<i data-lucide="upload-cloud"></i> Téléversement de ${fileCount} photo(s)...`;
         progressBarFill.style.width = '25%';
         refreshIcons();
 
@@ -447,17 +614,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            // Stage 2: Data Extraction
+            // Stage 2: Data Extraction with live timer
             setTimeout(() => {
-                stepperLabel.innerHTML = `<i data-lucide="search"></i> Numérisation et lecture des données manuscrites...`;
-                progressBarFill.style.width = '60%';
+                stepperLabel.innerHTML = `<i data-lucide="search"></i> Numérisation IA de ${fileCount} reçu(s) (1s)...`;
+                progressBarFill.style.width = '45%';
                 refreshIcons();
-            }, 500);
+
+                progressInterval = setInterval(() => {
+                    elapsed += 1;
+                    const pct = Math.min(45 + elapsed * 5, 88);
+                    progressBarFill.style.width = `${pct}%`;
+                    stepperLabel.innerHTML = `<i data-lucide="search"></i> Numérisation IA de ${fileCount} reçu(s) (${elapsed}s)...`;
+                    refreshIcons();
+                }, 1000);
+            }, 300);
 
             const response = await fetch('/api/scan', {
                 method: 'POST',
                 body: formData,
             });
+
+            if (progressInterval) clearInterval(progressInterval);
 
             const resData = await response.json();
 
@@ -475,14 +652,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Stage 3: Consolidation
             stepperLabel.innerHTML = `<i data-lucide="layers"></i> Consolidation & génération de la facture...`;
-            progressBarFill.style.width = '90%';
+            progressBarFill.style.width = '92%';
             refreshIcons();
 
-            await new Promise(r => setTimeout(r, 400));
+            await new Promise(r => setTimeout(r, 250));
 
             // Stage 4: Completed
             progressBarFill.style.width = '100%';
-            stepperLabel.innerHTML = `<i data-lucide="check-circle-2"></i> Traitement terminé avec succès !`;
+            stepperLabel.innerHTML = `<i data-lucide="check-circle-2"></i> Traitement terminé en ${elapsed > 0 ? elapsed + 's' : 'quelques secondes'} !`;
             refreshIcons();
 
             state.currentInvoice = resData.invoice;
@@ -490,11 +667,13 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast(`Facture ${resData.invoice.invoice_ref} consolidée avec succès !`, 'success');
 
         } catch (err) {
+            if (progressInterval) clearInterval(progressInterval);
             console.error(err);
             showToast(err.message || 'Une erreur est survenue lors du scan.', 'error');
             stepperLabel.innerHTML = `<i data-lucide="x-circle"></i> Échec du traitement.`;
             refreshIcons();
         } finally {
+            if (progressInterval) clearInterval(progressInterval);
             startScanBtn.disabled = false;
         }
     });
@@ -675,6 +854,24 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         updateTableTotals();
+
+        const viewPhotosBtn = document.getElementById('view-source-photos-btn');
+        const sourceCountEl = document.getElementById('source-photos-count');
+        if (viewPhotosBtn && state.selectedFiles && state.selectedFiles.length > 0) {
+            viewPhotosBtn.style.display = 'inline-flex';
+            if (sourceCountEl) sourceCountEl.textContent = state.selectedFiles.length;
+            viewPhotosBtn.onclick = () => {
+                const gallery = state.selectedFiles.map(f => ({
+                    url: URL.createObjectURL(f),
+                    name: f.name,
+                    caption: `${f.name} (${(f.size / 1024).toFixed(1)} Ko)`,
+                }));
+                openGallery(gallery, 0);
+            };
+        } else if (viewPhotosBtn) {
+            viewPhotosBtn.style.display = 'none';
+        }
+
         refreshIcons();
     }
 
@@ -772,6 +969,478 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ----------------------------------------------------------------------
+    // Magaza (Depot) Scanner & Interactive Editor Controller
+    // ----------------------------------------------------------------------
+    const dropzoneMagaza = document.getElementById('dropzone-magaza');
+    const fileInputMagaza = document.getElementById('file-input-magaza');
+    const previewGridMagaza = document.getElementById('preview-grid-magaza');
+    const clientNameInputMagaza = document.getElementById('client-name-input-magaza');
+    const clientAddressInputMagaza = document.getElementById('client-address-input-magaza');
+    const defaultDepotSelect = document.getElementById('default-depot-select');
+    const startScanBtnMagaza = document.getElementById('start-scan-btn-magaza');
+    const clearFilesBtnMagaza = document.getElementById('clear-files-btn-magaza');
+    const progressStepperMagaza = document.getElementById('progress-stepper-magaza');
+    const progressBarFillMagaza = document.getElementById('progress-bar-fill-magaza');
+    const stepperLabelMagaza = document.getElementById('stepper-label-magaza');
+    const resultsCardMagaza = document.getElementById('results-card-magaza');
+    const editClientNameMagaza = document.getElementById('edit-client-name-magaza');
+    const editClientAddressMagaza = document.getElementById('edit-client-address-magaza');
+    const editTransactionStatusMagaza = document.getElementById('edit-transaction-status-magaza');
+    const resultsTableBodyMagaza = document.getElementById('results-table-body-magaza');
+    const addRowBtnMagaza = document.getElementById('add-row-btn-magaza');
+    const recalculateBtnMagaza = document.getElementById('recalculate-btn-magaza');
+    const previewPdfBtnMagaza = document.getElementById('preview-pdf-btn-magaza');
+    const downloadPdfBtnMagaza = document.getElementById('download-pdf-btn-magaza');
+
+    state.selectedFilesMagaza = [];
+    state.currentInvoiceMagaza = null;
+
+    const DEPOT_OPTIONS = ['magaza 1', 'magaza 2', 'magaza 3', 'magaza 4'];
+
+    function buildDepotSelectHtml(selectedDepot = 'magaza 1') {
+        const target = (selectedDepot || 'magaza 1').trim().toLowerCase();
+        let options = '';
+        DEPOT_OPTIONS.forEach(d => {
+            const isSelected = (d.toLowerCase() === target);
+            options += `<option value="${d}" ${isSelected ? 'selected' : ''}>${d}</option>`;
+        });
+        return `<select class="table-input row-depot" style="font-weight: 600; color: var(--accent-blue);">${options}</select>`;
+    }
+
+    if (dropzoneMagaza && fileInputMagaza) {
+        dropzoneMagaza.addEventListener('click', () => fileInputMagaza.click());
+
+        dropzoneMagaza.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzoneMagaza.classList.add('drag-over');
+        });
+
+        dropzoneMagaza.addEventListener('dragleave', () => {
+            dropzoneMagaza.classList.remove('drag-over');
+        });
+
+        dropzoneMagaza.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzoneMagaza.classList.remove('drag-over');
+            handleFilesMagaza(e.dataTransfer.files);
+        });
+
+        fileInputMagaza.addEventListener('change', (e) => {
+            handleFilesMagaza(e.target.files);
+        });
+    }
+
+    function handleFilesMagaza(files) {
+        const valid = Array.from(files).filter(f => f.type.startsWith('image/'));
+        if (valid.length === 0) {
+            showToast('Veuillez sélectionner des images valides (PNG, JPG, WebP).', 'warning');
+            return;
+        }
+        state.selectedFilesMagaza = [...state.selectedFilesMagaza, ...valid];
+        if (fileInputMagaza) fileInputMagaza.value = '';
+        renderPreviewsMagaza();
+        updateScanButtonStateMagaza();
+    }
+
+    function renderPreviewsMagaza() {
+        if (!previewGridMagaza) return;
+        previewGridMagaza.innerHTML = '';
+        if (state.selectedFilesMagaza.length === 0) {
+            if (clearFilesBtnMagaza) clearFilesBtnMagaza.style.display = 'none';
+            return;
+        }
+        if (clearFilesBtnMagaza) clearFilesBtnMagaza.style.display = 'inline-flex';
+
+        state.selectedFilesMagaza.forEach((file, index) => {
+            const card = document.createElement('div');
+            card.className = 'preview-card';
+            card.title = 'Cliquer pour agrandir et zoomer sur la photo';
+            card.style.cursor = 'pointer';
+
+            const objectUrl = URL.createObjectURL(file);
+            const img = document.createElement('img');
+            img.src = objectUrl;
+
+            // Click card to open full lightbox gallery starting at this receipt index
+            card.addEventListener('click', () => {
+                const gallery = state.selectedFilesMagaza.map(f => ({
+                    url: URL.createObjectURL(f),
+                    name: f.name,
+                    caption: `${f.name} (${(f.size / 1024).toFixed(1)} Ko)`,
+                }));
+                openGallery(gallery, index);
+            });
+
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'preview-remove-btn';
+            removeBtn.innerHTML = '&times;';
+            removeBtn.title = 'Supprimer cette photo';
+            removeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                state.selectedFilesMagaza.splice(index, 1);
+                renderPreviewsMagaza();
+                updateScanButtonStateMagaza();
+            });
+
+            card.appendChild(img);
+            card.appendChild(removeBtn);
+            previewGridMagaza.appendChild(card);
+        });
+        refreshIcons();
+    }
+
+    function updateScanButtonStateMagaza() {
+        if (!startScanBtnMagaza) return;
+        const count = state.selectedFilesMagaza.length;
+        startScanBtnMagaza.disabled = count === 0;
+        const label = startScanBtnMagaza.querySelector('span');
+        if (label) {
+            label.textContent = count > 0 
+                ? `Numériser & Répartir (${count} reçu${count > 1 ? 's' : ''})` 
+                : 'Numériser & Générer par Dépôt';
+        }
+    }
+
+    if (clearFilesBtnMagaza) {
+        clearFilesBtnMagaza.addEventListener('click', () => {
+            state.selectedFilesMagaza = [];
+            renderPreviewsMagaza();
+            updateScanButtonStateMagaza();
+            if (fileInputMagaza) fileInputMagaza.value = '';
+        });
+    }
+
+    if (startScanBtnMagaza) {
+        startScanBtnMagaza.addEventListener('click', async () => {
+            if (state.selectedFilesMagaza.length === 0) return;
+
+            startScanBtnMagaza.disabled = true;
+            if (progressStepperMagaza) progressStepperMagaza.style.display = 'block';
+            if (resultsCardMagaza) resultsCardMagaza.style.display = 'none';
+
+            const fileCount = state.selectedFilesMagaza.length;
+            let elapsed = 0;
+            let progressInterval = null;
+
+            if (stepperLabelMagaza) stepperLabelMagaza.innerHTML = `<i data-lucide="upload-cloud"></i> Téléversement de ${fileCount} photo(s)...`;
+            if (progressBarFillMagaza) progressBarFillMagaza.style.width = '25%';
+            refreshIcons();
+
+            const formData = new FormData();
+            state.selectedFilesMagaza.forEach(file => {
+                formData.append('files', file);
+            });
+            if (clientNameInputMagaza && clientNameInputMagaza.value.trim()) {
+                formData.append('client_name', clientNameInputMagaza.value.trim());
+            }
+            if (clientAddressInputMagaza && clientAddressInputMagaza.value.trim()) {
+                formData.append('client_address', clientAddressInputMagaza.value.trim());
+            }
+            const defaultDepot = defaultDepotSelect ? defaultDepotSelect.value : 'magaza 1';
+            formData.append('default_depot', defaultDepot);
+
+            try {
+                setTimeout(() => {
+                    if (stepperLabelMagaza) stepperLabelMagaza.innerHTML = `<i data-lucide="search"></i> Numérisation IA de ${fileCount} reçu(s) (1s)...`;
+                    if (progressBarFillMagaza) progressBarFillMagaza.style.width = '45%';
+                    refreshIcons();
+
+                    progressInterval = setInterval(() => {
+                        elapsed += 1;
+                        const pct = Math.min(45 + elapsed * 5, 88);
+                        if (progressBarFillMagaza) progressBarFillMagaza.style.width = `${pct}%`;
+                        if (stepperLabelMagaza) stepperLabelMagaza.innerHTML = `<i data-lucide="search"></i> Numérisation IA de ${fileCount} reçu(s) (${elapsed}s)...`;
+                        refreshIcons();
+                    }, 1000);
+                }, 300);
+
+                const response = await fetch('/api/scan-magaza', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (progressInterval) clearInterval(progressInterval);
+
+                const resData = await response.json();
+
+                if (!response.ok || !resData.success) {
+                    if (progressBarFillMagaza) progressBarFillMagaza.style.width = '100%';
+                    if (stepperLabelMagaza) stepperLabelMagaza.innerHTML = `<i data-lucide="alert-triangle"></i> Échec de l'extraction`;
+                    refreshIcons();
+                    showToast(resData.message || resData.detail || 'Erreur lors du traitement', 'error');
+
+                    const magazaApiWarning = document.getElementById('magaza-api-warning');
+                    if (magazaApiWarning && resData.message && (resData.message.includes('clé') || resData.message.includes('API'))) {
+                        magazaApiWarning.style.display = 'flex';
+                    }
+                    return;
+                }
+
+                if (stepperLabelMagaza) stepperLabelMagaza.innerHTML = `<i data-lucide="layers"></i> Organisation par magasin & compilation PDF...`;
+                if (progressBarFillMagaza) progressBarFillMagaza.style.width = '92%';
+                refreshIcons();
+
+                await new Promise(r => setTimeout(r, 250));
+
+                if (progressBarFillMagaza) progressBarFillMagaza.style.width = '100%';
+                if (stepperLabelMagaza) stepperLabelMagaza.innerHTML = `<i data-lucide="check-circle-2"></i> Traitement terminé en ${elapsed > 0 ? elapsed + 's' : 'quelques secondes'} !`;
+                refreshIcons();
+
+                state.currentInvoiceMagaza = resData.invoice;
+                renderEditableMagazaResults(resData.invoice);
+                showToast(`Facture par dépôt ${resData.invoice.invoice_ref} générée avec succès !`, 'success');
+
+            } catch (err) {
+                if (progressInterval) clearInterval(progressInterval);
+                console.error(err);
+                showToast(err.message || 'Une erreur est survenue lors du scan.', 'error');
+                if (stepperLabelMagaza) stepperLabelMagaza.innerHTML = `<i data-lucide="x-circle"></i> Échec du traitement.`;
+                refreshIcons();
+            } finally {
+                if (progressInterval) clearInterval(progressInterval);
+                startScanBtnMagaza.disabled = false;
+            }
+        });
+    }
+
+    function appendMagazaTableRow(desc = '', qty = 1, price = 0, subtotal = 0, depot = 'magaza 1', index = null) {
+        if (!resultsTableBodyMagaza) return;
+        const tr = document.createElement('tr');
+        const idxNum = index || (resultsTableBodyMagaza.children.length + 1);
+        const parsed = parseDescription(desc);
+
+        tr.innerHTML = `
+            <td style="width: 4%; text-align: center; color: var(--text-muted); font-weight: bold;">${idxNum}</td>
+            <td style="width: 24%;">
+                <input type="text" class="table-input row-dim" value="${parsed.dimension}" placeholder="ex: 175/70 R13" />
+            </td>
+            <td style="width: 20%;">
+                ${buildBrandSelectHtml(parsed.brand)}
+            </td>
+            <td style="width: 17%;">
+                ${buildDepotSelectHtml(depot)}
+            </td>
+            <td style="width: 11%;">
+                <input type="number" class="table-input row-qty" value="${qty}" min="1" step="1" />
+            </td>
+            <td style="width: 12%;">
+                <input type="number" class="table-input row-price" value="${price}" min="0" step="0.5" />
+            </td>
+            <td style="width: 12%; font-weight: bold;" class="row-subtotal">
+                ${Number(subtotal).toFixed(2)} ${state.currency}
+            </td>
+            <td style="width: 5%; text-align: center;">
+                <button class="btn btn-rose btn-sm row-del-btn" title="Supprimer la ligne"><i data-lucide="trash-2"></i></button>
+            </td>
+        `;
+
+        const qtyInput = tr.querySelector('.row-qty');
+        const priceInput = tr.querySelector('.row-price');
+        const depotSelect = tr.querySelector('.row-depot');
+        const subtotalCell = tr.querySelector('.row-subtotal');
+        const delBtn = tr.querySelector('.row-del-btn');
+
+        function recalculateRow() {
+            const q = parseInt(qtyInput.value) || 0;
+            const p = parseFloat(priceInput.value) || 0;
+            const sub = (q * p).toFixed(2);
+            subtotalCell.textContent = `${sub} ${state.currency}`;
+            updateMagazaTableTotals();
+        }
+
+        qtyInput.addEventListener('input', recalculateRow);
+        priceInput.addEventListener('input', recalculateRow);
+        depotSelect.addEventListener('change', updateMagazaTableTotals);
+
+        delBtn.addEventListener('click', () => {
+            tr.remove();
+            updateMagazaTableTotals();
+        });
+
+        resultsTableBodyMagaza.appendChild(tr);
+        refreshIcons();
+    }
+
+    function updateMagazaTableTotals() {
+        if (!resultsTableBodyMagaza) return;
+        const rows = resultsTableBodyMagaza.querySelectorAll('tr');
+        let totalTyres = 0;
+        let grandTotal = 0;
+        const depotCounts = {};
+
+        rows.forEach((row, idx) => {
+            row.children[0].textContent = idx + 1;
+            const qty = parseInt(row.querySelector('.row-qty')?.value) || 0;
+            const price = parseFloat(row.querySelector('.row-price')?.value) || 0;
+            const depot = (row.querySelector('.row-depot')?.value || 'magaza 1').trim();
+            totalTyres += qty;
+            grandTotal += (qty * price);
+            depotCounts[depot] = (depotCounts[depot] || 0) + qty;
+        });
+
+        const totalQtyEl = document.getElementById('results-total-qty-magaza');
+        const grandTotalEl = document.getElementById('results-grand-total-magaza');
+        const pillsContainer = document.getElementById('magaza-pills-container');
+
+        if (totalQtyEl) totalQtyEl.textContent = `${totalTyres} pcs`;
+        if (grandTotalEl) grandTotalEl.textContent = `${grandTotal.toFixed(2)} ${state.currency}`;
+
+        if (pillsContainer) {
+            pillsContainer.innerHTML = '';
+            Object.keys(depotCounts).sort().forEach(d => {
+                const pill = document.createElement('span');
+                pill.className = 'table-badge source-web';
+                pill.style.fontSize = '11px';
+                pill.style.padding = '3px 8px';
+                pill.textContent = `${d}: ${depotCounts[d]} pcs`;
+                pillsContainer.appendChild(pill);
+            });
+        }
+    }
+
+    function renderEditableMagazaResults(invoice) {
+        if (!resultsCardMagaza || !resultsTableBodyMagaza) return;
+        resultsCardMagaza.style.display = 'block';
+        document.getElementById('results-ref-title-magaza').textContent = `${invoice.invoice_ref} (${invoice.client_name || 'Client sans nom'})`;
+        document.getElementById('results-summary-text-magaza').textContent =
+            `${invoice.total_quantity} pièces • ${invoice.distinct_items_count} modèles distincts • Répartition par Dépôt`;
+
+        if (editClientNameMagaza) editClientNameMagaza.value = invoice.client_name || '';
+        if (editClientAddressMagaza) editClientAddressMagaza.value = invoice.client_address || '';
+        if (editTransactionStatusMagaza) editTransactionStatusMagaza.value = invoice.transaction_status || 'En attente';
+
+        resultsTableBodyMagaza.innerHTML = '';
+        if (invoice.items && invoice.items.length > 0) {
+            invoice.items.forEach((item, idx) => {
+                const descWithBrand = item.brand ? `${item.reference || item.description} (${item.brand})` : item.description;
+                const depotVal = item.depot || 'magaza 1';
+                appendMagazaTableRow(descWithBrand, item.quantity, item.unit_price, item.subtotal, depotVal, idx + 1);
+            });
+        }
+        updateMagazaTableTotals();
+
+        const viewPhotosBtnMagaza = document.getElementById('view-source-photos-btn-magaza');
+        const sourceCountElMagaza = document.getElementById('source-photos-count-magaza');
+        if (viewPhotosBtnMagaza && state.selectedFilesMagaza && state.selectedFilesMagaza.length > 0) {
+            viewPhotosBtnMagaza.style.display = 'inline-flex';
+            if (sourceCountElMagaza) sourceCountElMagaza.textContent = state.selectedFilesMagaza.length;
+            viewPhotosBtnMagaza.onclick = () => {
+                const gallery = state.selectedFilesMagaza.map(f => ({
+                    url: URL.createObjectURL(f),
+                    name: f.name,
+                    caption: `${f.name} (${(f.size / 1024).toFixed(1)} Ko)`,
+                }));
+                openGallery(gallery, 0);
+            };
+        } else if (viewPhotosBtnMagaza) {
+            viewPhotosBtnMagaza.style.display = 'none';
+        }
+
+        refreshIcons();
+    }
+
+    if (addRowBtnMagaza) {
+        addRowBtnMagaza.addEventListener('click', () => {
+            const defDepot = defaultDepotSelect ? defaultDepotSelect.value : 'magaza 1';
+            appendMagazaTableRow('185/65 R15 (DELINTE)', 4, 480.0, 1920.0, defDepot);
+            updateMagazaTableTotals();
+        });
+    }
+
+    if (recalculateBtnMagaza) {
+        recalculateBtnMagaza.addEventListener('click', async () => {
+            if (!state.currentInvoiceMagaza) return;
+
+            const rows = resultsTableBodyMagaza.querySelectorAll('tr');
+            const items = [];
+
+            rows.forEach(row => {
+                const dim = row.querySelector('.row-dim')?.value.trim() || '';
+                const brand = row.querySelector('.row-brand')?.value.trim() || '';
+                const depot = row.querySelector('.row-depot')?.value.trim() || 'magaza 1';
+                const qty = parseInt(row.querySelector('.row-qty')?.value) || 0;
+                const price = parseFloat(row.querySelector('.row-price')?.value) || 0;
+
+                if (dim && qty > 0) {
+                    let fullDesc = dim;
+                    if (brand && brand !== 'AUTRE') {
+                        fullDesc = `${dim} (${brand})`;
+                    }
+                    items.push({
+                        description: fullDesc,
+                        reference: dim,
+                        brand: brand && brand !== 'AUTRE' ? brand : '',
+                        depot: depot,
+                        quantity: qty,
+                        unit_price: price,
+                    });
+                }
+            });
+
+            if (items.length === 0) {
+                showToast('Veuillez ajouter au moins un article valide.', 'error');
+                return;
+            }
+
+            try {
+                recalculateBtnMagaza.disabled = true;
+                recalculateBtnMagaza.innerHTML = `<i data-lucide="loader-2"></i> Enregistrement...`;
+                refreshIcons();
+
+                const payload = {
+                    client_name: (editClientNameMagaza ? editClientNameMagaza.value.trim() : '') || (clientNameInputMagaza ? clientNameInputMagaza.value.trim() : '') || state.currentInvoiceMagaza.client_name,
+                    client_address: (editClientAddressMagaza ? editClientAddressMagaza.value.trim() : '') || state.currentInvoiceMagaza.client_address || '',
+                    transaction_status: (editTransactionStatusMagaza ? editTransactionStatusMagaza.value.trim() : '') || state.currentInvoiceMagaza.transaction_status || 'En attente',
+                    items: items,
+                };
+
+                const res = await fetch(`/api/invoices/${safeRef(state.currentInvoiceMagaza.invoice_ref)}/recalculate-magaza`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!res.ok) throw new Error('Échec du recalcul de la facture par dépôt.');
+
+                const data = await res.json();
+                state.currentInvoiceMagaza = data.invoice;
+                renderEditableMagazaResults(data.invoice);
+                showToast('Facture par dépôt mise à jour et PDF régénéré avec succès !', 'success');
+
+            } catch (err) {
+                console.error(err);
+                showToast(err.message || 'Erreur lors du recalcul.', 'error');
+            } finally {
+                recalculateBtnMagaza.disabled = false;
+                recalculateBtnMagaza.innerHTML = `<i data-lucide="save"></i> Enregistrer & Régénérer PDF`;
+                refreshIcons();
+            }
+        });
+    }
+
+    if (previewPdfBtnMagaza) {
+        previewPdfBtnMagaza.addEventListener('click', () => {
+            if (state.currentInvoiceMagaza) {
+                openReviewModal(state.currentInvoiceMagaza.invoice_ref, true);
+            }
+        });
+    }
+
+    if (downloadPdfBtnMagaza) {
+        downloadPdfBtnMagaza.addEventListener('click', () => {
+            if (state.currentInvoiceMagaza) {
+                const clean = state.currentInvoiceMagaza.invoice_ref.replace('#', '');
+                const a = document.createElement('a');
+                a.href = `/api/invoices/${safeRef(state.currentInvoiceMagaza.invoice_ref)}/pdf-magaza?download=true`;
+                a.download = `Facture_Magaza_${clean}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            }
+        });
+    }
+
+    // ----------------------------------------------------------------------
     // Invoices Archive Logic
     // ----------------------------------------------------------------------
     async function loadInvoices(searchQuery = '') {
@@ -825,7 +1494,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ----------------------------------------------------------------------
     // Global Actions (Attached to window for inline onclick)
     // ----------------------------------------------------------------------
-    window.openReviewModal = async function(invoiceRef) {
+    window.openReviewModal = async function(invoiceRef, isMagaza = false) {
         try {
             const encodedRef = safeRef(invoiceRef);
             const res = await fetch(`/api/invoices/${encodedRef}`);
@@ -833,8 +1502,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const inv = await res.json();
             const cleanRef = inv.invoice_ref.replace('#', '');
+            const useMagaza = isMagaza || (inv.source === 'web_magaza');
 
-            pdfModalTitle.textContent = `Facture ${inv.invoice_ref}`;
+            pdfModalTitle.textContent = useMagaza ? `Facture par Dépôt ${inv.invoice_ref}` : `Facture ${inv.invoice_ref}`;
             const clientInfoParts = [inv.client_name];
             if (inv.client_address) clientInfoParts.push(inv.client_address);
             if (inv.transaction_date || inv.date_str) clientInfoParts.push(inv.transaction_date || inv.date_str);
@@ -851,10 +1521,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const parsed = parseDescription(item.description);
                     const ref = item.reference || parsed.dimension;
                     const brand = item.brand || parsed.brand;
+                    const depot = item.depot || '';
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td style="text-align: center; color: var(--text-muted); font-weight: bold;">${item.index_num || item.index || '-'}</td>
-                        <td style="font-weight: 700; color: var(--text-primary);">${ref}</td>
+                        <td style="font-weight: 700; color: var(--text-primary);">${ref} ${depot ? `<span class="table-badge source-telegram" style="font-size:10px; margin-left:4px;">${depot}</span>` : ''}</td>
                         <td>${brand ? `<span class="table-badge source-web">${brand}</span>` : '<span style="color:var(--text-muted);">-</span>'}</td>
                         <td style="text-align: center; font-weight: 700; color: var(--accent-blue);">${item.quantity} pcs</td>
                         <td style="text-align: right;">${Number(item.unit_price).toFixed(2)} ${state.currency}</td>
@@ -866,10 +1537,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 modalItemsTbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--text-muted);">Aucun article dans cette facture.</td></tr>`;
             }
 
-            const pdfUrl = `/api/invoices/${encodedRef}/pdf`;
+            const pdfUrl = useMagaza ? `/api/invoices/${encodedRef}/pdf-magaza` : `/api/invoices/${encodedRef}/pdf`;
             pdfModalFrame.src = pdfUrl;
             pdfModalDownload.href = `${pdfUrl}?download=true`;
-            pdfModalDownload.setAttribute('download', `Facture_${cleanRef}.pdf`);
+            pdfModalDownload.setAttribute('download', useMagaza ? `Facture_Magaza_${cleanRef}.pdf` : `Facture_${cleanRef}.pdf`);
 
             showModalTab('table');
             pdfModal.classList.add('active');
@@ -929,90 +1600,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ----------------------------------------------------------------------
-    // AI Provider Switcher
+    // Settings Management (Simplified: API Key Input & Business Details)
     // ----------------------------------------------------------------------
-    function updateProviderPanels() {
-        const isDeepseek = providerDeepseekRadio && providerDeepseekRadio.checked;
-        state.aiProvider = isDeepseek ? 'deepseek' : 'gemini';
-
-        if (geminiConfigPanel && deepseekConfigPanel) {
-            geminiConfigPanel.style.display = isDeepseek ? 'none' : 'flex';
-            deepseekConfigPanel.style.display = isDeepseek ? 'flex' : 'none';
-        }
-
-        const geminiLabel = document.getElementById('provider-gemini-label');
-        const deepseekLabel = document.getElementById('provider-deepseek-label');
-        if (geminiLabel && deepseekLabel) {
-            if (isDeepseek) {
-                geminiLabel.classList.remove('active');
-                deepseekLabel.classList.add('active');
-            } else {
-                geminiLabel.classList.add('active');
-                deepseekLabel.classList.remove('active');
-            }
-        }
-
-        checkScannerKeyStatus();
-    }
-
-    if (providerGeminiRadio && providerDeepseekRadio) {
-        providerGeminiRadio.addEventListener('change', updateProviderPanels);
-        providerDeepseekRadio.addEventListener('change', updateProviderPanels);
-    }
-
-    // ----------------------------------------------------------------------
-    // Settings Management
-    // ----------------------------------------------------------------------
-    function populateGeminiModels(modelsList, selectedModel) {
-        if (!settingsGeminiModel || !modelsList || modelsList.length === 0) return;
-
-        settingsGeminiModel.innerHTML = '';
-        const targetModel = (selectedModel || 'gemini-2.5-flash').replace('models/', '').trim();
-
-        let found = false;
-        modelsList.forEach(m => {
-            const opt = document.createElement('option');
-            opt.value = m.id;
-            const badge = m.is_flash ? '⚡ Rapide' : '🧠 Précis';
-            opt.textContent = `${m.name} (${m.id}) — ${badge}`;
-            if (m.id === targetModel) {
-                opt.selected = true;
-                found = true;
-            }
-            settingsGeminiModel.appendChild(opt);
-        });
-
-        if (!found && targetModel) {
-            const customOpt = document.createElement('option');
-            customOpt.value = targetModel;
-            customOpt.textContent = `${targetModel} (Actuel)`;
-            customOpt.selected = true;
-            settingsGeminiModel.appendChild(customOpt);
-        }
-    }
-
-    async function loadGeminiModels(apiKey = '') {
-        try {
-            if (refreshGeminiModelsBtn) refreshGeminiModelsBtn.disabled = true;
-            const url = '/api/settings/models';
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ provider: 'gemini', gemini_api_key: apiKey || undefined }),
-            });
-            if (res.ok) {
-                const data = await res.json();
-                if (data.models) {
-                    populateGeminiModels(data.models, data.selected);
-                }
-            }
-        } catch (err) {
-            console.error(err);
-        } finally {
-            if (refreshGeminiModelsBtn) refreshGeminiModelsBtn.disabled = false;
-        }
-    }
-
     async function loadSettings() {
         try {
             const res = await fetch('/api/settings');
@@ -1026,70 +1615,31 @@ document.addEventListener('DOMContentLoaded', () => {
             if (settingsCompanyEmail) settingsCompanyEmail.value = data.company_email || '';
             if (settingsCurrency) settingsCurrency.value = data.currency || 'DH';
 
-            // Provider selection
-            state.aiProvider = data.ai_provider || 'gemini';
-            if (state.aiProvider === 'deepseek') {
-                if (providerDeepseekRadio) providerDeepseekRadio.checked = true;
-            } else {
-                if (providerGeminiRadio) providerGeminiRadio.checked = true;
-            }
-            updateProviderPanels();
+            state.aiProvider = 'gemini';
 
-            // Gemini Settings
+            // Gemini Key Status
             state.geminiConfigured = data.gemini_api_key_configured;
-            if (data.gemini_api_key_configured) {
-                geminiStatusBadge.innerHTML = '<i data-lucide="check-circle-2"></i> Active & Configurée';
-                geminiStatusBadge.className = 'table-badge source-web';
-                if (!settingsGeminiKey.value && data.gemini_api_key_masked) {
-                    settingsGeminiKey.placeholder = `Configurée (${data.gemini_api_key_masked}) — Tapez pour changer`;
+            if (geminiStatusBadge) {
+                if (data.gemini_api_key_configured) {
+                    geminiStatusBadge.innerHTML = '<i data-lucide="check-circle-2"></i> Active & Configurée';
+                    geminiStatusBadge.className = 'table-badge source-web';
+                    if (settingsGeminiKey && !settingsGeminiKey.value && data.gemini_api_key_masked) {
+                        settingsGeminiKey.placeholder = `Configurée (${data.gemini_api_key_masked}) — Tapez pour changer`;
+                    }
+                } else {
+                    geminiStatusBadge.innerHTML = '<i data-lucide="alert-circle"></i> Non Configurée';
+                    geminiStatusBadge.className = 'table-badge source-telegram';
+                    if (settingsGeminiKey) settingsGeminiKey.placeholder = 'AIzaSy... (Saisissez votre clé Gemini)';
                 }
-            } else {
-                geminiStatusBadge.innerHTML = '<i data-lucide="alert-circle"></i> Non Configurée';
-                geminiStatusBadge.className = 'table-badge source-telegram';
-                settingsGeminiKey.placeholder = 'AIzaSy... (Saisissez votre clé Gemini)';
-            }
-
-            // DeepSeek Settings
-            state.deepseekConfigured = data.deepseek_api_key_configured;
-            if (data.deepseek_api_key_configured) {
-                deepseekStatusBadge.innerHTML = '<i data-lucide="check-circle-2"></i> Active & Configurée';
-                deepseekStatusBadge.className = 'table-badge source-web';
-                if (!settingsDeepseekKey.value && data.deepseek_api_key_masked) {
-                    settingsDeepseekKey.placeholder = `Configurée (${data.deepseek_api_key_masked}) — Tapez pour changer`;
-                }
-            } else {
-                deepseekStatusBadge.innerHTML = '<i data-lucide="alert-circle"></i> Non Configurée';
-                deepseekStatusBadge.className = 'table-badge source-telegram';
-                settingsDeepseekKey.placeholder = 'sk-... (Saisissez votre clé DeepSeek)';
-            }
-
-            if (settingsDeepseekModel && data.deepseek_model) {
-                settingsDeepseekModel.value = data.deepseek_model;
-            }
-            if (settingsDeepseekBaseUrl && data.deepseek_base_url) {
-                settingsDeepseekBaseUrl.value = data.deepseek_base_url;
-            }
-
-            // Load Gemini models
-            await loadGeminiModels();
-            if (settingsGeminiModel && data.gemini_model) {
-                settingsGeminiModel.value = data.gemini_model.replace('models/', '').trim();
             }
 
             checkScannerKeyStatus();
+            checkMagazaKeyStatus();
             refreshIcons();
 
         } catch (err) {
             console.error(err);
         }
-    }
-
-    if (refreshGeminiModelsBtn) {
-        refreshGeminiModelsBtn.addEventListener('click', async () => {
-            showToast('Détection des moteurs Gemini supportés...', 'info');
-            await loadGeminiModels(settingsGeminiKey.value.trim());
-            showToast('Liste des modèles Gemini actualisée avec succès !', 'success');
-        });
     }
 
     // Toggle Gemini key visibility
@@ -1106,50 +1656,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Toggle DeepSeek key visibility
-    if (toggleDeepseekKeyBtn && settingsDeepseekKey) {
-        toggleDeepseekKeyBtn.addEventListener('click', () => {
-            if (settingsDeepseekKey.type === 'password') {
-                settingsDeepseekKey.type = 'text';
-                toggleDeepseekKeyBtn.innerHTML = '<i data-lucide="eye-off"></i>';
-            } else {
-                settingsDeepseekKey.type = 'password';
-                toggleDeepseekKeyBtn.innerHTML = '<i data-lucide="eye"></i>';
-            }
-            refreshIcons();
-        });
-    }
-
-    // Preset Buttons for OpenRouter and DeepSeek
-    const presetOpenrouterBtn = document.getElementById('preset-openrouter-btn');
-    const presetDeepseekBtn = document.getElementById('preset-deepseek-btn');
-
-    if (presetOpenrouterBtn) {
-        presetOpenrouterBtn.addEventListener('click', () => {
-            if (settingsDeepseekBaseUrl) settingsDeepseekBaseUrl.value = 'https://openrouter.ai/api/v1';
-            if (settingsDeepseekModel) settingsDeepseekModel.value = 'deepseek/deepseek-v4-flash-0731';
-            if (settingsDeepseekKey && !settingsDeepseekKey.value) {
-                settingsDeepseekKey.placeholder = 'sk-or-v1-... (Collez votre clé OpenRouter)';
-            }
-            showToast('Preset OpenRouter appliqué ! Modèle gratuit pré-rempli.', 'info');
-        });
-    }
-
-    if (presetDeepseekBtn) {
-        presetDeepseekBtn.addEventListener('click', () => {
-            if (settingsDeepseekBaseUrl) settingsDeepseekBaseUrl.value = 'https://api.deepseek.com';
-            if (settingsDeepseekModel) settingsDeepseekModel.value = 'deepseek-chat';
-            if (settingsDeepseekKey && !settingsDeepseekKey.value) {
-                settingsDeepseekKey.placeholder = 'sk-... (Collez votre clé DeepSeek)';
-            }
-            showToast('Preset DeepSeek Officiel appliqué !', 'info');
-        });
-    }
-
     // Test Gemini Key
     if (testGeminiKeyBtn) {
         testGeminiKeyBtn.addEventListener('click', async () => {
-            const key = settingsGeminiKey.value.trim();
+            const key = settingsGeminiKey ? settingsGeminiKey.value.trim() : '';
             try {
                 testGeminiKeyBtn.disabled = true;
                 testGeminiKeyBtn.innerHTML = '<i data-lucide="loader-2"></i> Test...';
@@ -1164,17 +1674,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await res.json();
                 if (data.valid) {
                     showToast(data.message, 'success');
-                    geminiStatusBadge.innerHTML = '<i data-lucide="check-circle-2"></i> Valide & Connectée';
-                    geminiStatusBadge.className = 'table-badge source-web';
-                    if (data.supported_models) {
-                        populateGeminiModels(data.supported_models, data.model);
+                    if (geminiStatusBadge) {
+                        geminiStatusBadge.innerHTML = '<i data-lucide="check-circle-2"></i> Valide & Connectée';
+                        geminiStatusBadge.className = 'table-badge source-web';
                     }
                     state.geminiConfigured = true;
                     checkScannerKeyStatus();
+                    checkMagazaKeyStatus();
                 } else {
                     showToast(data.message || 'Clé API Gemini invalide', 'error');
-                    geminiStatusBadge.innerHTML = '<i data-lucide="alert-circle"></i> Invalide';
-                    geminiStatusBadge.className = 'table-badge source-telegram';
+                    if (geminiStatusBadge) {
+                        geminiStatusBadge.innerHTML = '<i data-lucide="alert-circle"></i> Invalide';
+                        geminiStatusBadge.className = 'table-badge source-telegram';
+                    }
                 }
                 refreshIcons();
             } catch (err) {
@@ -1188,106 +1700,54 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Test DeepSeek / OpenRouter Key
-    if (testDeepseekKeyBtn) {
-        testDeepseekKeyBtn.addEventListener('click', async () => {
-            const key = settingsDeepseekKey ? settingsDeepseekKey.value.trim() : '';
-            const baseUrl = (settingsDeepseekBaseUrl && settingsDeepseekBaseUrl.value) ? settingsDeepseekBaseUrl.value.trim() : 'https://openrouter.ai/api/v1';
-            const model = (settingsDeepseekModel && settingsDeepseekModel.value) ? settingsDeepseekModel.value.trim() : 'deepseek/deepseek-v4-flash-0731';
-
+    // Save All Settings
+    if (saveSettingsBtn) {
+        saveSettingsBtn.addEventListener('click', async () => {
             try {
-                testDeepseekKeyBtn.disabled = true;
-                testDeepseekKeyBtn.innerHTML = '<i data-lucide="loader-2"></i> Test...';
+                saveSettingsBtn.disabled = true;
+                saveSettingsBtn.innerHTML = '<i data-lucide="loader-2"></i> Enregistrement...';
                 refreshIcons();
 
-                const res = await fetch('/api/settings/test-key', {
+                const payload = {
+                    ai_provider: 'gemini',
+                    gemini_model: 'gemini-3.7-flash',
+                    company_name: settingsCompanyName ? settingsCompanyName.value.trim() : 'Tous Pneus',
+                    company_address: settingsCompanyAddress ? settingsCompanyAddress.value.trim() : undefined,
+                    company_phone: settingsCompanyPhone ? settingsCompanyPhone.value.trim() : undefined,
+                    company_email: settingsCompanyEmail ? settingsCompanyEmail.value.trim() : undefined,
+                    currency: settingsCurrency ? settingsCurrency.value.trim() : 'DH',
+                };
+
+                if (settingsGeminiKey && settingsGeminiKey.value.trim()) {
+                    payload.gemini_api_key = settingsGeminiKey.value.trim();
+                }
+
+                const res = await fetch('/api/settings', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        provider: 'deepseek',
-                        deepseek_api_key: key || undefined,
-                        deepseek_base_url: baseUrl || 'https://openrouter.ai/api/v1',
-                        deepseek_model: model || 'deepseek/deepseek-v4-flash-0731',
-                    }),
+                    body: JSON.stringify(payload),
                 });
 
+                if (!res.ok) throw new Error('Échec de la sauvegarde');
+
                 const data = await res.json();
-                if (data.valid) {
-                    showToast(data.message, 'success');
-                    deepseekStatusBadge.innerHTML = '<i data-lucide="check-circle-2"></i> Valide & Connectée';
-                    deepseekStatusBadge.className = 'table-badge source-web';
-                    state.deepseekConfigured = true;
-                    checkScannerKeyStatus();
-                } else {
-                    showToast(data.message || 'Échec de connexion DeepSeek', 'error');
-                    deepseekStatusBadge.innerHTML = '<i data-lucide="alert-circle"></i> Invalide';
-                    deepseekStatusBadge.className = 'table-badge source-telegram';
-                }
-                refreshIcons();
+                state.aiProvider = 'gemini';
+                state.geminiConfigured = data.gemini_api_key_configured;
+
+                showToast('Paramètres et clé API enregistrés avec succès !', 'success');
+                if (settingsGeminiKey) settingsGeminiKey.value = '';
+                loadSettings();
+
             } catch (err) {
                 console.error(err);
-                showToast('Impossible de contacter le serveur de test DeepSeek.', 'error');
+                showToast('Erreur lors de la sauvegarde des paramètres.', 'error');
             } finally {
-                testDeepseekKeyBtn.disabled = false;
-                testDeepseekKeyBtn.innerHTML = '<i data-lucide="flask-conical"></i> Tester';
+                saveSettingsBtn.disabled = false;
+                saveSettingsBtn.innerHTML = '<i data-lucide="save"></i> Enregistrer les Paramètres';
                 refreshIcons();
             }
         });
     }
-
-    // Save All Settings
-    saveSettingsBtn.addEventListener('click', async () => {
-        try {
-            saveSettingsBtn.disabled = true;
-            saveSettingsBtn.innerHTML = '<i data-lucide="loader-2"></i> Enregistrement...';
-            refreshIcons();
-
-            const activeProvider = (providerDeepseekRadio && providerDeepseekRadio.checked) ? 'deepseek' : 'gemini';
-
-            const payload = {
-                ai_provider: activeProvider,
-                company_name: settingsCompanyName.value.trim(),
-                company_address: settingsCompanyAddress ? settingsCompanyAddress.value.trim() : undefined,
-                company_phone: settingsCompanyPhone ? settingsCompanyPhone.value.trim() : undefined,
-                company_email: settingsCompanyEmail ? settingsCompanyEmail.value.trim() : undefined,
-                currency: settingsCurrency.value.trim(),
-                gemini_model: settingsGeminiModel ? settingsGeminiModel.value.trim() : undefined,
-                deepseek_model: settingsDeepseekModel ? settingsDeepseekModel.value.trim() : undefined,
-                deepseek_base_url: settingsDeepseekBaseUrl ? settingsDeepseekBaseUrl.value.trim() : undefined,
-            };
-
-            if (settingsGeminiKey && settingsGeminiKey.value.trim()) {
-                payload.gemini_api_key = settingsGeminiKey.value.trim();
-            }
-            if (settingsDeepseekKey && settingsDeepseekKey.value.trim()) {
-                payload.deepseek_api_key = settingsDeepseekKey.value.trim();
-            }
-
-            const res = await fetch('/api/settings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-
-            if (!res.ok) throw new Error('Échec de la sauvegarde');
-
-            const data = await res.json();
-            state.aiProvider = data.ai_provider;
-            state.geminiConfigured = data.gemini_api_key_configured;
-            state.deepseekConfigured = data.deepseek_api_key_configured;
-
-            showToast('Paramètres et configuration enregistrés avec succès !', 'success');
-            loadSettings();
-
-        } catch (err) {
-            console.error(err);
-            showToast('Erreur lors de la sauvegarde des paramètres.', 'error');
-        } finally {
-            saveSettingsBtn.disabled = false;
-            saveSettingsBtn.innerHTML = '<i data-lucide="save"></i> Enregistrer les Modifications';
-            refreshIcons();
-        }
-    });
 
     // ----------------------------------------------------------------------
     // Initialization

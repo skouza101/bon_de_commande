@@ -40,8 +40,8 @@ class Settings(BaseSettings):
         alias="GEMINI_API_KEY",
     )
     gemini_model: str = Field(
-        default="gemini-2.5-flash",
-        description="Gemini model name (e.g. gemini-2.5-flash, gemini-2.0-flash, gemini-1.5-flash)",
+        default="gemini-3.5-flash-lite",
+        description="Gemini vision model name (Gemini 3.5 Flash Lite)",
         alias="GEMINI_MODEL",
     )
 

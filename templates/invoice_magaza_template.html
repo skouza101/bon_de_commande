@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <title>Facture par Dépôt - {{ invoice.invoice_ref }}</title>
+    <style>
+        @page {
+            size: a4 portrait;
+            margin: 15mm 15mm 15mm 15mm;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, 'DejaVu Sans', sans-serif;
+            color: #000000;
+            background-color: #FFFFFF;
+            font-size: 10pt;
+            line-height: 1.4;
+            padding: 5px 10px;
+        }
+
+        /* Header Layout */
+        .header-container {
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .header-table td {
+            vertical-align: bottom;
+        }
+
+        .logo-img {
+            width: 44px;
+            height: 44px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .company-info {
+            font-size: 9.5pt;
+            line-height: 1.35;
+            color: #000000;
+        }
+
+        .company-info .info-line {
+            margin-bottom: 2px;
+        }
+
+        .company-info b {
+            font-weight: 700;
+        }
+
+        .invoice-title-cell {
+            text-align: right;
+            vertical-align: bottom;
+            padding-bottom: 6px;
+        }
+
+        .invoice-title {
+            font-size: 17pt;
+            font-weight: 800;
+            color: #000000;
+            letter-spacing: 0.2px;
+        }
+
+        /* Full Width Divider */
+        .divider {
+            width: 100%;
+            height: 2px;
+            background-color: #000000;
+            margin-top: 4px;
+            margin-bottom: 16px;
+        }
+
+        /* Client Details */
+        .client-info-block {
+            margin-bottom: 18px;
+            font-size: 10pt;
+            line-height: 1.45;
+        }
+
+        .client-line {
+            margin-bottom: 3px;
+        }
+
+        .client-line b {
+            font-weight: 700;
+        }
+
+        /* Magaza Section */
+        .magaza-section {
+            margin-bottom: 22px;
+            page-break-inside: avoid;
+        }
+
+        .magaza-title {
+            font-size: 13pt;
+            font-weight: 800;
+            color: #000000;
+            margin-bottom: 8px;
+            margin-top: 10px;
+        }
+
+        /* Items Table */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 6px;
+            border: 1px solid #000000;
+        }
+
+        .items-table th,
+        .items-table td {
+            border: 1px solid #666666;
+            padding: 7px 9px;
+            font-size: 9.5pt;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        .items-table th {
+            background-color: #EDEDED;
+            color: #000000;
+            font-weight: 700;
+            border-bottom: 1.5px solid #000000;
+        }
+
+        .items-table td {
+            color: #000000;
+        }
+
+        /* Overall Grand Total Box */
+        .grand-total-box {
+            margin-top: 16px;
+            padding: 10px 14px;
+            background-color: #F8F9FA;
+            border: 1.5px solid #000000;
+            font-size: 11pt;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Grouped Magaza Tables -->
+    {% for magaza_name, items in grouped_items.items() %}
+    <div class="magaza-section">
+        <div class="magaza-title">{{ magaza_name }}</div>
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 23%;">Référence</th>
+                    <th style="width: 12%;">Marque</th>
+                    <th style="width: 13%;">Dépôt</th>
+                    <th style="width: 12%;">Quantité</th>
+                    <th style="width: 20%;">Prix unitaire ({{ currency }})</th>
+                    <th style="width: 20%;">Total ({{ currency }})</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ item.reference or item.description }}</td>
+                    <td>{{ item.brand or "" }}</td>
+                    <td>{{ item.depot or magaza_name }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ "%.2f"|format(item.unit_price) }}</td>
+                    <td>{{ "%.2f"|format(item.subtotal) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endfor %}
+
+    <!-- Overall Summary Box -->
+    <table style="width: 100%; border-collapse: collapse; margin-top: 14px; border: 1.5px solid #000000; background-color: #F8F9FA;">
+        <tr>
+            <td style="padding: 9px 12px; font-weight: 700; font-size: 10.5pt; width: 50%;">
+                Total Pièces : <b>{{ invoice.total_quantity }} pcs</b>
+            </td>
+            <td style="padding: 9px 12px; font-weight: 800; font-size: 11pt; text-align: right; width: 50%;">
+                Montant Total Global : {{ "%.2f"|format(invoice.grand_total) }} {{ currency }}
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>

@@ -147,6 +147,35 @@ def _clean_json_markdown(text: str) -> str:
     return cleaned
 
 
+def _prepare_image_bytes(path: Path, max_dimension: int = 2048) -> tuple[bytes, str]:
+    """Read image bytes and optimize resolution if oversized for fast multimodal upload."""
+    suffix = path.suffix.lower()
+    mime_type = "image/jpeg"
+    if suffix == ".png":
+        mime_type = "image/png"
+    elif suffix == ".webp":
+        mime_type = "image/webp"
+
+    try:
+        from PIL import Image, ImageOps
+        import io
+        with Image.open(path) as img:
+            img = ImageOps.exif_transpose(img)
+            w, h = img.size
+            if max(w, h) > max_dimension or path.stat().st_size > 1.5 * 1024 * 1024:
+                img.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
+                buf = io.BytesIO()
+                if img.mode in ("RGBA", "P") and mime_type == "image/jpeg":
+                    img = img.convert("RGB")
+                img.save(buf, format="JPEG" if mime_type == "image/jpeg" else "PNG", quality=90, optimize=True)
+                return buf.getvalue(), mime_type
+    except Exception as e:
+        logger.debug(f"Image preprocessing fallback: {e}")
+
+    with open(path, "rb") as f:
+        return f.read(), mime_type
+
+
 # ---------------------------------------------------------------------------
 # Gemini Multimodal Vision Extractor
 # ---------------------------------------------------------------------------
@@ -155,7 +184,7 @@ class GeminiVisionExtractor:
     """Async extractor handling multimodal image requests via Google Gemini."""
 
     def __init__(self):
-        self._semaphore = asyncio.Semaphore(1)
+        self._semaphore = asyncio.Semaphore(5)
 
     def _clean_model_name(self, model: str) -> str:
         """Strip 'models/' prefix and whitespace."""
@@ -192,25 +221,8 @@ class GeminiVisionExtractor:
             return SingleInvoiceExtraction(items=[])
 
         client = self._get_client()
-
-        configured_model = self._clean_model_name(settings.gemini_model)
-        fallback_models = [
-            configured_model,
-            "gemini-2.5-flash",
-            "gemini-3.7-flash",
-        ]
-        seen = set()
-        models_to_try = [m for m in fallback_models if not (m in seen or seen.add(m))]
-
-        with open(path, "rb") as f:
-            image_bytes = f.read()
-
-        mime_type = "image/jpeg"
-        suffix = path.suffix.lower()
-        if suffix == ".png":
-            mime_type = "image/png"
-        elif suffix == ".webp":
-            mime_type = "image/webp"
+        model_name = self._clean_model_name(settings.gemini_model or "gemini-2.5-flash")
+        image_bytes, mime_type = _prepare_image_bytes(path)
 
         prompt = (
             f"{VISION_SYSTEM_PROMPT}\n\n"
@@ -223,52 +235,64 @@ class GeminiVisionExtractor:
         if hasattr(client, "models"):
             from google.genai import types
 
-            for model_name in models_to_try:
-                for attempt in range(3):
-                    try:
-                        logger.info(f"Extracting receipt with Gemini model: {model_name} (attempt {attempt+1})")
+            for attempt in range(3):
+                try:
+                    logger.info(f"Extracting receipt with Gemini model: {model_name} (attempt {attempt+1})")
 
-                        def _call_model(m=model_name):
-                            return client.models.generate_content(
-                                model=m,
-                                contents=[
-                                    types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
-                                    prompt,
-                                ],
-                                config=types.GenerateContentConfig(
-                                    response_mime_type="application/json",
-                                    response_schema=SingleInvoiceExtraction,
-                                    temperature=0.1,
-                                ),
-                            )
+                    config_args = {
+                        "response_mime_type": "application/json",
+                        "response_schema": SingleInvoiceExtraction,
+                        "temperature": 0.1,
+                    }
+                    # Disable reasoning overhead on Gemini 3.7+ flash models for rapid OCR response
+                    if "3.7" in model_name or "reasoning" in model_name:
+                        try:
+                            config_args["thinking_config"] = types.ThinkingConfig(thinking_budget=0)
+                        except Exception:
+                            pass
 
-                        response = await loop.run_in_executor(None, _call_model)
-                        if response and response.text:
-                            data = json.loads(response.text)
-                            return SingleInvoiceExtraction.model_validate(data)
-                        return SingleInvoiceExtraction(items=[])
+                    def _call_model(m=model_name):
+                        return client.models.generate_content(
+                            model=m,
+                            contents=[
+                                types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
+                                prompt,
+                            ],
+                            config=types.GenerateContentConfig(**config_args),
+                        )
 
-                    except Exception as e:
-                        last_error = e
-                        err_str = str(e)
-                        logger.warning(f"Gemini {model_name} attempt {attempt+1} failed: {err_str}")
+                    response = await loop.run_in_executor(None, _call_model)
+                    if response and response.text:
+                        data = json.loads(response.text)
+                        return SingleInvoiceExtraction.model_validate(data)
+                    return SingleInvoiceExtraction(items=[])
 
-                        if "API_KEY" in err_str.upper() or "PERMISSION_DENIED" in err_str.upper():
-                            raise VisionExtractionError(f"Clé Google Gemini invalide : {err_str}")
+                except Exception as e:
+                    last_error = e
+                    err_str = str(e)
+                    logger.warning(f"Gemini {model_name} attempt {attempt+1} failed: {err_str}")
 
-                        if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "503" in err_str or "UNAVAILABLE" in err_str:
-                            wait_sec = 3 * (attempt + 1)
-                            logger.info(f"Gemini rate limit. Waiting {wait_sec}s...")
-                            await asyncio.sleep(wait_sec)
-                            continue
-                        else:
-                            break
+                    if "API_KEY" in err_str.upper() or "PERMISSION_DENIED" in err_str.upper() or "UNAUTHENTICATED" in err_str.upper():
+                        raise VisionExtractionError(f"Clé Google Gemini invalide ou non autorisée : {err_str}")
+
+                    if "503" in err_str or "UNAVAILABLE" in err_str or "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                        wait_sec = 2 * (attempt + 1)
+                        logger.info(f"Gemini transient error, waiting {wait_sec}s...")
+                        await asyncio.sleep(wait_sec)
+                        continue
+                    else:
+                        break
 
         err_msg = str(last_error)
         if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
             raise VisionExtractionError(
-                "Le quota de requêtes par minute de votre clé Gemini est temporairement atteint. "
-                "Veuillez patienter 20 secondes et relancer."
+                "Le quota de requêtes de votre clé Gemini est temporairement atteint. "
+                "Veuillez patienter quelques secondes et relancer."
+            )
+        if "503" in err_msg or "UNAVAILABLE" in err_msg:
+            raise VisionExtractionError(
+                f"Le modèle {model_name} est temporairement indisponible (503). "
+                "Veuillez réessayer dans quelques instants."
             )
         raise VisionExtractionError(f"Échec Gemini: {err_msg}")
 
@@ -308,16 +332,7 @@ class DeepSeekExtractor:
         elif not base_url.endswith("/v1") and "deepseek.com" in base_url:
             base_url = f"{base_url}/v1"
 
-        with open(path, "rb") as f:
-            image_bytes = f.read()
-
-        mime_type = "image/jpeg"
-        suffix = path.suffix.lower()
-        if suffix == ".png":
-            mime_type = "image/png"
-        elif suffix == ".webp":
-            mime_type = "image/webp"
-
+        image_bytes, mime_type = _prepare_image_bytes(path)
         b64_img = base64.b64encode(image_bytes).decode("utf-8")
         data_uri = f"data:{mime_type};base64,{b64_img}"
 
@@ -462,15 +477,20 @@ class UnifiedVisionExtractor:
     async def extract_from_images(
         self, image_paths: List[Union[str, Path]]
     ) -> List[SingleInvoiceExtraction]:
-        """Sequentially extract line items from multiple images with safe throttling."""
-        results: List[SingleInvoiceExtraction] = []
-        for idx, path in enumerate(image_paths):
-            async with self._semaphore:
-                if idx > 0:
-                    await asyncio.sleep(1.5)
-                res = await self.extract_from_image(path)
-                results.append(res)
-        return results
+        """Extract line items from multiple images concurrently in parallel with bounded throttling."""
+        if not image_paths:
+            return []
+
+        # Bound concurrent requests to avoid provider rate spikes while running in parallel
+        sem = asyncio.Semaphore(5)
+
+        async def _extract_bounded(path):
+            async with sem:
+                return await self.extract_from_image(path)
+
+        tasks = [_extract_bounded(p) for p in image_paths]
+        results = await asyncio.gather(*tasks)
+        return list(results)
 
 
 # Global unified extractor instance

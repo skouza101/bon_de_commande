@@ -8,7 +8,7 @@ any arithmetic discrepancies.
 import datetime
 import random
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from pydantic import BaseModel, Field
 
 from extractor import RawInvoiceItem, SingleInvoiceExtraction
@@ -24,6 +24,7 @@ class ConsolidatedItem(BaseModel):
     description: str = Field(description="Normalized tyre description, dimension, and brand code")
     reference: str = Field(default="", description="Tyre dimension/size reference e.g. 195 R14")
     brand: str = Field(default="", description="Tyre brand name e.g. Landspider")
+    depot: str = Field(default="magaza 1", description="Depot or store identifier e.g. magaza 1, magaza 2, magaza 3, magaza 4")
     quantity: int = Field(description="Total consolidated quantity across all receipts", ge=1)
     unit_price: float = Field(description="Unit price in MAD / DH", ge=0.0)
     subtotal: float = Field(description="Line subtotal (quantity * unit_price)", ge=0.0)
@@ -286,8 +287,9 @@ def consolidate_extractions(
     Returns:
         ConsolidatedInvoice with aggregated items and summary metrics.
     """
-    # Key: (normalized_description, unit_price) -> aggregated quantity
-    grouped: Dict[Tuple[str, float], int] = {}
+    # Group items strictly by normalized description
+    # Map: normalized_description -> dict(quantity, prices, depots)
+    grouped: Dict[str, Dict[str, Any]] = {}
     detected_client_names: List[str] = []
 
     for ext in extractions:
@@ -301,23 +303,41 @@ def consolidate_extractions(
             if qty <= 0:
                 continue
 
-            key = (norm_desc, price)
-            grouped[key] = grouped.get(key, 0) + qty
+            key = norm_desc.strip()
+            item_depot = getattr(item, "depot", None) or ""
 
-    # Sort items by description alphabetically, then by price
-    sorted_keys = sorted(grouped.keys(), key=lambda k: (k[0], k[1]))
+            if key not in grouped:
+                grouped[key] = {
+                    "quantity": qty,
+                    "prices": [price] if price > 0 else [],
+                    "depots": [item_depot] if item_depot else [],
+                }
+            else:
+                grouped[key]["quantity"] += qty
+                if price > 0:
+                    grouped[key]["prices"].append(price)
+                if item_depot:
+                    grouped[key]["depots"].append(item_depot)
+
+    # Sort items by description alphabetically
+    sorted_keys = sorted(grouped.keys())
 
     consolidated_items: List[ConsolidatedItem] = []
     total_quantity = 0
     grand_total = 0.0
 
-    for idx, (desc, price) in enumerate(sorted_keys, start=1):
-        qty = grouped[(desc, price)]
-        subtotal = round(qty * price, 2)
+    for idx, desc in enumerate(sorted_keys, start=1):
+        data = grouped[desc]
+        qty = data["quantity"]
+        prices = data["prices"]
+        # Use the highest non-zero unit price found across receipts, or 0.0
+        final_price = max(prices) if prices else 0.0
+        subtotal = round(qty * final_price, 2)
         total_quantity += qty
         grand_total += subtotal
 
         dim, brand = split_dimension_and_brand(desc)
+        depot_val = data["depots"][0] if data["depots"] else "magaza 1"
 
         consolidated_items.append(
             ConsolidatedItem(
@@ -325,8 +345,9 @@ def consolidate_extractions(
                 description=desc,
                 reference=dim or desc,
                 brand=brand,
+                depot=depot_val,
                 quantity=qty,
-                unit_price=price,
+                unit_price=final_price,
                 subtotal=subtotal,
             )
         )

@@ -107,19 +107,22 @@ def test_consolidate_multi_invoice_extractions():
     assert consolidated.grand_total == 24120.0
 
 
-def test_consolidation_with_different_prices_same_dimension():
-    """Test that items with the same dimension but different unit prices remain separate."""
+def test_consolidation_merges_repeated_same_dimension():
+    """Test that duplicate items with the same dimension are merged into a single line item with summed quantities."""
     ext = SingleInvoiceExtraction(
         client_name="Transport Express",
         items=[
-            RawInvoiceItem(raw_description="205/55 R16", quantity=4, unit_price=550.0),
-            RawInvoiceItem(raw_description="205/55 R16", quantity=2, unit_price=600.0),
+            RawInvoiceItem(raw_description="185/65 R15 (PETLAS)", quantity=2, unit_price=0.0),
+            RawInvoiceItem(raw_description="185/65 R15 (PETLAS)", quantity=4, unit_price=475.0),
         ],
     )
     consolidated = consolidate_extractions([ext])
-    assert consolidated.distinct_items_count == 2
+    assert consolidated.distinct_items_count == 1
     assert consolidated.total_quantity == 6
-    assert consolidated.grand_total == (4 * 550.0) + (2 * 600.0)
+    assert consolidated.items[0].quantity == 6
+    assert consolidated.items[0].unit_price == 475.0
+    assert consolidated.items[0].subtotal == 2850.0
+    assert consolidated.grand_total == 2850.0
 
 
 # ---------------------------------------------------------------------------
@@ -384,5 +387,193 @@ def test_deepseek_clean_json_markdown():
     assert extraction.items[0].raw_description == "175/70 R13 (L)"
     assert extraction.items[0].quantity == 4
     assert extraction.items[0].unit_price == 450.0
+
+
+def test_magaza_item_and_pdf_generation():
+    """Test generating a Magaza-grouped PDF invoice matching the user reference layout."""
+    items = [
+        ConsolidatedItem(
+            index=1,
+            description="155 R12 C (BOTO)",
+            reference="155 R12 C",
+            brand="Boto",
+            depot="magaza 4",
+            quantity=4,
+            unit_price=400.0,
+            subtotal=1600.0,
+        ),
+        ConsolidatedItem(
+            index=2,
+            description="225/45 R17 91V XL (DELINTE)",
+            reference="225/45 R17 91V XL",
+            brand="Delinte",
+            depot="magaza 4",
+            quantity=2,
+            unit_price=700.0,
+            subtotal=1400.0,
+        ),
+        ConsolidatedItem(
+            index=3,
+            description="215/55 R16 93V (DELINTE)",
+            reference="215/55 R16 93V",
+            brand="Delinte",
+            depot="magaza 4",
+            quantity=4,
+            unit_price=725.0,
+            subtotal=2900.0,
+        ),
+        ConsolidatedItem(
+            index=4,
+            description="205/55 R16 91V (BOTO)",
+            reference="205/55 R16 91V",
+            brand="Boto",
+            depot="magaza 3",
+            quantity=2,
+            unit_price=520.0,
+            subtotal=1040.0,
+        ),
+        ConsolidatedItem(
+            index=5,
+            description="205/55 R16 91V (GOODYEAR)",
+            reference="205/55 R16 91V",
+            brand="Goodyear",
+            depot="magaza 3",
+            quantity=3,
+            unit_price=660.0,
+            subtotal=1980.0,
+        ),
+        ConsolidatedItem(
+            index=6,
+            description="185/65 R15 88T (DELINTE)",
+            reference="185/65 R15 88T",
+            brand="Delinte",
+            depot="magaza 1",
+            quantity=4,
+            unit_price=480.0,
+            subtotal=1920.0,
+        ),
+        ConsolidatedItem(
+            index=7,
+            description="165/60 R14 75H (DELINTE)",
+            reference="165/60 R14 75H",
+            brand="Delinte",
+            depot="magaza 2",
+            quantity=2,
+            unit_price=450.0,
+            subtotal=900.0,
+        ),
+    ]
+
+    total_qty = sum(it.quantity for it in items)
+    grand_tot = sum(it.subtotal for it in items)
+
+    invoice = ConsolidatedInvoice(
+        invoice_ref="#REC-2026-MAGAZA-TEST",
+        client_name="Transport Express Maroc",
+        client_address="Casablanca",
+        date_str="30/08/2026",
+        transaction_date="30/08/2026 à 22:00",
+        transaction_status="Validé",
+        items=items,
+        total_quantity=total_qty,
+        distinct_items_count=len(items),
+        grand_total=grand_tot,
+        source_invoices_count=4,
+    )
+
+    pdf_path = pdf_generator.generate_magaza_pdf_sync(invoice, "test_magaza_invoice.pdf")
+    assert pdf_path.exists()
+    assert pdf_path.stat().st_size > 1000
+
+
+def test_magaza_database_and_endpoints():
+    """Test persisting depot assignments and recalculating via REST API."""
+    from database import db as app_db
+
+    items = [
+        ConsolidatedItem(
+            index=1,
+            description="175/70 R13 (LASSA)",
+            reference="175/70 R13",
+            brand="LASSA",
+            depot="magaza 1",
+            quantity=4,
+            unit_price=450.0,
+            subtotal=1800.0,
+        ),
+        ConsolidatedItem(
+            index=2,
+            description="205/55 R16 (PETLAS)",
+            reference="205/55 R16",
+            brand="PETLAS",
+            depot="magaza 3",
+            quantity=2,
+            unit_price=600.0,
+            subtotal=1200.0,
+        ),
+    ]
+
+    invoice = ConsolidatedInvoice(
+        invoice_ref="#REC-2026-MAG-DB",
+        client_name="Client Dépôt",
+        date_str="30/08/2026",
+        items=items,
+        total_quantity=6,
+        distinct_items_count=2,
+        grand_total=3000.0,
+        source_invoices_count=1,
+    )
+
+    invoice_id = app_db.save_consolidated_invoice(invoice, "test_mag_db.pdf", source="web_magaza")
+    assert invoice_id > 0
+
+    fetched = app_db.get_invoice_by_ref("#REC-2026-MAG-DB")
+    assert fetched is not None
+    assert fetched["client_name"] == "Client Dépôt"
+    assert len(fetched["items"]) == 2
+    assert fetched["items"][0]["depot"] == "magaza 1"
+    assert fetched["items"][1]["depot"] == "magaza 3"
+
+    # Test endpoints with TestClient
+    client = TestClient(app)
+    recalc_res = client.post(
+        "/api/invoices/%23REC-2026-MAG-DB/recalculate-magaza",
+        json={
+            "client_name": "Client Dépôt Modifié",
+            "items": [
+                {
+                    "description": "175/70 R13 (LASSA)",
+                    "reference": "175/70 R13",
+                    "brand": "LASSA",
+                    "depot": "magaza 2",
+                    "quantity": 8,
+                    "unit_price": 450.0,
+                },
+                {
+                    "description": "205/55 R16 (PETLAS)",
+                    "reference": "205/55 R16",
+                    "brand": "PETLAS",
+                    "depot": "magaza 4",
+                    "quantity": 4,
+                    "unit_price": 600.0,
+                },
+            ],
+        },
+    )
+    assert recalc_res.status_code == 200
+    recalc_data = recalc_res.json()
+    assert recalc_data["success"] is True
+    assert recalc_data["invoice"]["client_name"] == "Client Dépôt Modifié"
+    assert recalc_data["invoice"]["total_quantity"] == 12
+    assert recalc_data["invoice"]["items"][0]["depot"] == "magaza 2"
+    assert recalc_data["invoice"]["items"][1]["depot"] == "magaza 4"
+
+    # Test PDF download endpoint
+    pdf_res = client.get("/api/invoices/%23REC-2026-MAG-DB/pdf-magaza")
+    assert pdf_res.status_code == 200
+    assert pdf_res.headers["content-type"] == "application/pdf"
+
+    # Cleanup test record
+    app_db.delete_invoice_by_ref("#REC-2026-MAG-DB")
 
 

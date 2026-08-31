@@ -26,6 +26,10 @@ invoices.db
 invoices.db-journal
 invoices.db-wal
 invoices.db-shm
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
 temp_downloads/
 output_invoices/
 *.log
