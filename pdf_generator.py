@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from config import settings
-from consolidator import ConsolidatedInvoice
+from consolidator import ConsolidatedInvoice, merge_invoice_items_for_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -408,14 +408,15 @@ class PDFGenerator:
         filename = output_filename or f"Facture_{sanitized_ref}.pdf"
         output_path = settings.output_dir / filename
 
-        html_content = self.render_html(invoice)
+        pdf_invoice = merge_invoice_items_for_pdf(invoice, group_by_depot=False)
+        html_content = self.render_html(pdf_invoice)
 
         # 1. Try WeasyPrint (Linux / Docker standard)
         if self._compile_with_weasyprint(html_content, output_path):
             return output_path
 
         # 2. Try ReportLab (Native Python vector PDF engine)
-        if self._compile_with_reportlab(invoice, output_path):
+        if self._compile_with_reportlab(pdf_invoice, output_path):
             return output_path
 
         # 3. Try xhtml2pdf (HTML fallback)
@@ -614,14 +615,15 @@ class PDFGenerator:
         filename = output_filename or f"Facture_Magaza_{sanitized_ref}.pdf"
         output_path = settings.output_dir / filename
 
-        html_content = self.render_magaza_html(invoice)
+        pdf_invoice = merge_invoice_items_for_pdf(invoice, group_by_depot=True)
+        html_content = self.render_magaza_html(pdf_invoice)
 
         # 1. Try WeasyPrint
         if self._compile_with_weasyprint(html_content, output_path):
             return output_path
 
         # 2. Try ReportLab
-        if self._compile_magaza_with_reportlab(invoice, output_path):
+        if self._compile_magaza_with_reportlab(pdf_invoice, output_path):
             return output_path
 
         # 3. Try xhtml2pdf

@@ -20,6 +20,7 @@ from consolidator import (
     consolidate_extractions,
     ConsolidatedInvoice,
     ConsolidatedItem,
+    merge_invoice_items_for_pdf,
 )
 from extractor import RawInvoiceItem, SingleInvoiceExtraction
 from pdf_generator import pdf_generator
@@ -123,6 +124,75 @@ def test_consolidation_merges_repeated_same_dimension():
     assert consolidated.items[0].unit_price == 475.0
     assert consolidated.items[0].subtotal == 2850.0
     assert consolidated.grand_total == 2850.0
+
+
+def test_consolidation_preserves_paper_line_order():
+    """Verify that consolidated items maintain the exact order from the scanned paper receipt."""
+    ext = SingleInvoiceExtraction(
+        client_name="Garage Atlas",
+        items=[
+            RawInvoiceItem(raw_description="175/65 R14 (P)", quantity=2, unit_price=420.0),
+            RawInvoiceItem(raw_description="185/65 R15 (P)", quantity=2, unit_price=460.0),
+            RawInvoiceItem(raw_description="155 R12 (Bt)", quantity=2, unit_price=350.0),
+        ],
+    )
+    consolidated = consolidate_extractions([ext])
+    # Must match paper receipt order: 175/65 R14 first, 185/65 R15 second, 155 R12 third (not sorted alphabetically by size)
+    descriptions = [item.reference for item in consolidated.items]
+    assert descriptions == ["175/65 R14", "185/65 R15", "155 R12"]
+    assert consolidated.items[0].index == 1
+    assert consolidated.items[1].index == 2
+    assert consolidated.items[2].index == 3
+
+
+def test_unmerged_multi_receipt_scanning_and_pdf_merging():
+    """Verify that multiple receipts do not merge identical lines in scan mode, but merge in PDF."""
+    ext1 = SingleInvoiceExtraction(
+        invoice_number="001",
+        client_name="Atlas Pneus",
+        items=[
+            RawInvoiceItem(raw_description="175/65 R14 (P)", quantity=2, unit_price=400.0),
+            RawInvoiceItem(raw_description="185/65 R15 (P)", quantity=4, unit_price=450.0),
+        ],
+    )
+    ext2 = SingleInvoiceExtraction(
+        invoice_number="002",
+        client_name="Atlas Pneus",
+        items=[
+            RawInvoiceItem(raw_description="175/65 R14 (P)", quantity=2, unit_price=400.0),
+            RawInvoiceItem(raw_description="155 R12 (Bt)", quantity=2, unit_price=350.0),
+        ],
+    )
+
+    # 1. Unmerged mode for web dashboard scan table:
+    unmerged = consolidate_extractions([ext1, ext2], merge_lines=False)
+    assert len(unmerged.items) == 4
+    assert unmerged.total_quantity == 10
+    # All rows are individually preserved in paper order:
+    assert [it.description for it in unmerged.items] == [
+        "175/65 R14 (PETLAS)",
+        "185/65 R15 (PETLAS)",
+        "175/65 R14 (PETLAS)",
+        "155 R12 (BOTO)",
+    ]
+
+    # 2. PDF-only merge:
+    merged_pdf_invoice = merge_invoice_items_for_pdf(unmerged)
+    assert len(merged_pdf_invoice.items) == 3
+    assert merged_pdf_invoice.total_quantity == 10
+    assert merged_pdf_invoice.items[0].description == "175/65 R14 (PETLAS)"
+    assert merged_pdf_invoice.items[0].quantity == 4
+    assert merged_pdf_invoice.items[0].subtotal == 1600.0
+    assert merged_pdf_invoice.items[1].description == "185/65 R15 (PETLAS)"
+    assert merged_pdf_invoice.items[1].quantity == 4
+    assert merged_pdf_invoice.items[2].description == "155 R12 (BOTO)"
+    assert merged_pdf_invoice.items[2].quantity == 2
+
+    # 3. PDF compiles with the unmerged invoice (which internally merges for PDF)
+    pdf_path = pdf_generator.generate_pdf_sync(unmerged, output_filename="test_unmerged_merged_pdf.pdf")
+    assert pdf_path.exists()
+    assert pdf_path.stat().st_size > 1000
+
 
 
 # ---------------------------------------------------------------------------
@@ -239,10 +309,11 @@ def test_fastapi_endpoints():
     """Test web dashboard API endpoints."""
     client = TestClient(app)
 
-    # 1. Test GET /
-    res_home = client.get("/")
-    assert res_home.status_code == 200
-    assert "TyreConsolidator" in res_home.text or "Consolidation" in res_home.text
+    # 1. Test GET page routes (/home, /scanner, /magaza, /archive, /settings)
+    for route in ["/", "/home", "/dashboard", "/scanner", "/magaza", "/archive", "/settings"]:
+        res_page = client.get(route)
+        assert res_page.status_code == 200
+        assert "TyreConsolidator" in res_page.text
 
     # 2. Test GET /api/analytics
     res_analytics = client.get("/api/analytics")

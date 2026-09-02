@@ -267,90 +267,127 @@ def consolidate_extractions(
     client_name_override: Optional[str] = None,
     client_address_override: Optional[str] = None,
     invoice_ref: Optional[str] = None,
+    merge_lines: bool = True,
 ) -> ConsolidatedInvoice:
-    """Consolidate multiple invoice extractions into a single structured summary.
+    """Consolidate multiple invoice extractions into a structured summary.
 
-    Aggregation key: (normalized_description.upper(), unit_price)
-
-    Calculations:
-        - Consolidated Quantity = sum(quantity)
-        - Line Subtotal = Consolidated Quantity * unit_price
-        - Total Tyres = sum(Consolidated Quantity)
-        - Grand Total = sum(Line Subtotal)
+    If merge_lines is True: groups identical tyres across all receipts.
+    If merge_lines is False: keeps every line item separate in document order.
 
     Args:
         extractions: List of single invoice extraction models.
         client_name_override: Optional client name override.
         client_address_override: Optional client address override.
         invoice_ref: Optional custom invoice reference.
+        merge_lines: Whether to merge identical lines (True) or keep them individual (False).
 
     Returns:
-        ConsolidatedInvoice with aggregated items and summary metrics.
+        ConsolidatedInvoice with line items and summary metrics.
     """
-    # Group items strictly by normalized description
-    # Map: normalized_description -> dict(quantity, prices, depots)
-    grouped: Dict[str, Dict[str, Any]] = {}
     detected_client_names: List[str] = []
 
-    for ext in extractions:
-        if ext.client_name and ext.client_name.strip():
-            detected_client_names.append(ext.client_name.strip())
+    if not merge_lines:
+        # Keep every line item from every receipt individual and unmerged
+        items: List[ConsolidatedItem] = []
+        total_quantity = 0
+        grand_total = 0.0
+        idx = 1
 
-        for item in ext.items:
-            norm_desc = normalize_tyre_description(item.raw_description)
-            price = round(float(item.unit_price), 2)
-            qty = int(item.quantity)
-            if qty <= 0:
-                continue
+        for ext in extractions:
+            if ext.client_name and ext.client_name.strip():
+                detected_client_names.append(ext.client_name.strip())
 
-            key = norm_desc.strip()
-            item_depot = getattr(item, "depot", None) or ""
+            for item in ext.items:
+                norm_desc = normalize_tyre_description(item.raw_description)
+                price = round(float(item.unit_price), 2)
+                qty = int(item.quantity)
+                if qty <= 0:
+                    continue
 
-            if key not in grouped:
-                grouped[key] = {
-                    "quantity": qty,
-                    "prices": [price] if price > 0 else [],
-                    "depots": [item_depot] if item_depot else [],
-                }
-            else:
-                grouped[key]["quantity"] += qty
-                if price > 0:
-                    grouped[key]["prices"].append(price)
-                if item_depot:
-                    grouped[key]["depots"].append(item_depot)
+                subtotal = round(qty * price, 2)
+                total_quantity += qty
+                grand_total += subtotal
 
-    # Sort items by description alphabetically
-    sorted_keys = sorted(grouped.keys())
+                dim, brand = split_dimension_and_brand(norm_desc)
+                item_depot = getattr(item, "depot", None) or "magaza 1"
 
-    consolidated_items: List[ConsolidatedItem] = []
-    total_quantity = 0
-    grand_total = 0.0
+                items.append(
+                    ConsolidatedItem(
+                        index=idx,
+                        description=norm_desc,
+                        reference=dim or norm_desc,
+                        brand=brand,
+                        depot=item_depot,
+                        quantity=qty,
+                        unit_price=price,
+                        subtotal=subtotal,
+                    )
+                )
+                idx += 1
 
-    for idx, desc in enumerate(sorted_keys, start=1):
-        data = grouped[desc]
-        qty = data["quantity"]
-        prices = data["prices"]
-        # Use the highest non-zero unit price found across receipts, or 0.0
-        final_price = max(prices) if prices else 0.0
-        subtotal = round(qty * final_price, 2)
-        total_quantity += qty
-        grand_total += subtotal
+        consolidated_items = items
+    else:
+        # Group items strictly by normalized description
+        grouped: Dict[str, Dict[str, Any]] = {}
 
-        dim, brand = split_dimension_and_brand(desc)
-        depot_val = data["depots"][0] if data["depots"] else "magaza 1"
+        for ext in extractions:
+            if ext.client_name and ext.client_name.strip():
+                detected_client_names.append(ext.client_name.strip())
 
-        consolidated_items.append(
-            ConsolidatedItem(
-                index=idx,
-                description=desc,
-                reference=dim or desc,
-                brand=brand,
-                depot=depot_val,
-                quantity=qty,
-                unit_price=final_price,
-                subtotal=subtotal,
+            for item in ext.items:
+                norm_desc = normalize_tyre_description(item.raw_description)
+                price = round(float(item.unit_price), 2)
+                qty = int(item.quantity)
+                if qty <= 0:
+                    continue
+
+                key = norm_desc.strip()
+                item_depot = getattr(item, "depot", None) or ""
+
+                if key not in grouped:
+                    grouped[key] = {
+                        "quantity": qty,
+                        "prices": [price] if price > 0 else [],
+                        "depots": [item_depot] if item_depot else [],
+                    }
+                else:
+                    grouped[key]["quantity"] += qty
+                    if price > 0:
+                        grouped[key]["prices"].append(price)
+                    if item_depot:
+                        grouped[key]["depots"].append(item_depot)
+
+        # Preserve original line order as extracted from the paper receipt(s)
+        ordered_keys = list(grouped.keys())
+
+        consolidated_items = []
+        total_quantity = 0
+        grand_total = 0.0
+
+        for idx, desc in enumerate(ordered_keys, start=1):
+            data = grouped[desc]
+            qty = data["quantity"]
+            prices = data["prices"]
+            final_price = max(prices) if prices else 0.0
+            subtotal = round(qty * final_price, 2)
+            total_quantity += qty
+            grand_total += subtotal
+
+            dim, brand = split_dimension_and_brand(desc)
+            depot_val = data["depots"][0] if data["depots"] else "magaza 1"
+
+            consolidated_items.append(
+                ConsolidatedItem(
+                    index=idx,
+                    description=desc,
+                    reference=dim or desc,
+                    brand=brand,
+                    depot=depot_val,
+                    quantity=qty,
+                    unit_price=final_price,
+                    subtotal=subtotal,
+                )
             )
-        )
 
     # Determine Client Name
     if client_name_override and client_name_override.strip():
@@ -378,7 +415,102 @@ def consolidate_extractions(
         transaction_status="En attente",
         items=consolidated_items,
         total_quantity=total_quantity,
-        distinct_items_count=len(consolidated_items),
+        distinct_items_count=len(set(f"{it.reference.upper()}|{it.brand.upper()}" for it in consolidated_items)) if not merge_lines else len(consolidated_items),
         grand_total=round(grand_total, 2),
         source_invoices_count=len(extractions),
     )
+
+
+def merge_invoice_items_for_pdf(
+    invoice: ConsolidatedInvoice,
+    group_by_depot: bool = False,
+) -> ConsolidatedInvoice:
+    """Merge identical tyre lines strictly for PDF generation.
+
+    If group_by_depot is True:
+        Aggregates identical tyres within each depot (for Magaza PDF).
+    If group_by_depot is False:
+        Aggregates identical tyres across all lines (for Standard PDF).
+
+    Preserves document order of first appearance.
+    """
+    if not invoice.items:
+        return invoice
+
+    grouped: Dict[Any, Dict[str, Any]] = {}
+
+    for item in invoice.items:
+        dim, brand_from_desc = split_dimension_and_brand(item.description)
+        ref = (item.reference or dim or item.description).strip()
+        brand = (item.brand or brand_from_desc or "").strip()
+        depot_val = (getattr(item, "depot", None) or "magaza 1").strip()
+
+        if group_by_depot:
+            key = (ref.upper(), brand.upper(), depot_val.lower())
+        else:
+            key = (ref.upper(), brand.upper())
+
+        qty = int(item.quantity)
+        price = round(float(item.unit_price), 2)
+        if qty <= 0:
+            continue
+
+        if key not in grouped:
+            grouped[key] = {
+                "description": item.description,
+                "reference": ref,
+                "brand": brand,
+                "depot": depot_val,
+                "quantity": qty,
+                "prices": [price] if price > 0 else [],
+            }
+        else:
+            grouped[key]["quantity"] += qty
+            if price > 0:
+                grouped[key]["prices"].append(price)
+            if not grouped[key]["depot"] and depot_val:
+                grouped[key]["depot"] = depot_val
+
+    merged_items: List[ConsolidatedItem] = []
+    total_qty = 0
+    grand_total = 0.0
+
+    for idx, (k, d) in enumerate(grouped.items(), start=1):
+        qty = d["quantity"]
+        prices = d["prices"]
+        final_price = max(prices) if prices else 0.0
+        subtotal = round(qty * final_price, 2)
+        total_qty += qty
+        grand_total += subtotal
+
+        b_name = d["brand"]
+        ref = d["reference"]
+        clean_desc = d["description"] if d.get("description") else (f"{ref} ({b_name.upper()})" if b_name else ref)
+
+        merged_items.append(
+            ConsolidatedItem(
+                index=idx,
+                description=clean_desc,
+                reference=ref,
+                brand=b_name,
+                depot=d["depot"],
+                quantity=qty,
+                unit_price=final_price,
+                subtotal=subtotal,
+            )
+        )
+
+    return ConsolidatedInvoice(
+        invoice_ref=invoice.invoice_ref,
+        client_name=invoice.client_name,
+        client_address=invoice.client_address,
+        date_str=invoice.date_str,
+        transaction_date=invoice.transaction_date,
+        transaction_status=invoice.transaction_status,
+        items=merged_items,
+        total_quantity=total_qty,
+        distinct_items_count=len(merged_items),
+        grand_total=round(grand_total, 2),
+        source_invoices_count=invoice.source_invoices_count,
+    )
+

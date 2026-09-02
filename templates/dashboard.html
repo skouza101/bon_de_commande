@@ -30,7 +30,7 @@
         
         <!-- SIDEBAR NAVIGATION -->
         <aside class="sidebar">
-            <div class="brand">
+            <a href="/home" class="brand" style="text-decoration: none; color: inherit;">
                 <div class="brand-icon">
                     <img src="/static/img/pneus_logo.png" alt="Logo de l'Entreprise" class="brand-logo-img">
                 </div>
@@ -38,26 +38,26 @@
                     <span class="brand-title">TyreConsolidator</span>
                     <span class="brand-subtitle">Gestion & Facturation</span>
                 </div>
-            </div>
+            </a>
 
             <nav class="nav-menu">
-                <a href="#dashboard" class="nav-item active" data-tab="dashboard">
+                <a href="/home" class="nav-item {% if active_tab == 'dashboard' or not active_tab %}active{% endif %}" data-tab="dashboard">
                     <span class="nav-icon"><i data-lucide="layout-dashboard"></i></span>
                     <span>Tableau de Bord</span>
                 </a>
-                <a href="#scanner" class="nav-item" data-tab="scanner">
+                <a href="/scanner" class="nav-item {% if active_tab == 'scanner' %}active{% endif %}" data-tab="scanner">
                     <span class="nav-icon"><i data-lucide="scan-line"></i></span>
                     <span>Numérisation & Scan</span>
                 </a>
-                <a href="#magaza" class="nav-item" data-tab="magaza">
+                <a href="/magaza" class="nav-item {% if active_tab == 'magaza' %}active{% endif %}" data-tab="magaza">
                     <span class="nav-icon"><i data-lucide="warehouse"></i></span>
                     <span>Scan par Dépôt</span>
                 </a>
-                <a href="#archive" class="nav-item" data-tab="archive">
+                <a href="/archive" class="nav-item {% if active_tab == 'archive' %}active{% endif %}" data-tab="archive">
                     <span class="nav-icon"><i data-lucide="folder-archive"></i></span>
                     <span>Historique Factures</span>
                 </a>
-                <a href="#settings" class="nav-item" data-tab="settings">
+                <a href="/settings" class="nav-item {% if active_tab == 'settings' %}active{% endif %}" data-tab="settings">
                     <span class="nav-icon"><i data-lucide="settings-2"></i></span>
                     <span>Paramètres & API</span>
                 </a>
@@ -73,8 +73,20 @@
             <!-- TOP HEADER BAR -->
             <header class="top-header">
                 <div class="header-left">
-                    <h1 class="header-title" id="header-title">Tableau de Bord & Métriques</h1>
-                    <p class="header-subtitle" id="header-subtitle">Vue d'ensemble de l'activité, chiffre d'affaires et statistiques pneumatiques</p>
+                    <h1 class="header-title" id="header-title">
+                        {%- if active_tab == 'scanner' -%}Numérisation & Consolidation
+                        {%- elif active_tab == 'magaza' -%}Numérisation & Répartition par Dépôt
+                        {%- elif active_tab == 'archive' -%}Historique des Factures
+                        {%- elif active_tab == 'settings' -%}Paramètres & Configuration
+                        {%- else -%}Tableau de Bord & Métriques{%- endif -%}
+                    </h1>
+                    <p class="header-subtitle" id="header-subtitle">
+                        {%- if active_tab == 'scanner' -%}Importez vos photos de bons manuscrits et générez vos factures A4
+                        {%- elif active_tab == 'magaza' -%}Importez vos photos de bons et affectez chaque article aux dépôts (magaza 1, 2, 3, 4)
+                        {%- elif active_tab == 'archive' -%}Consultez, téléchargez et gérez toutes les factures consolidées
+                        {%- elif active_tab == 'settings' -%}Personnalisation des mentions légales, fournisseur IA et clés d'accès
+                        {%- else -%}Vue d'ensemble de l'activité, chiffre d'affaires et statistiques pneumatiques{%- endif -%}
+                    </p>
                 </div>
                 <div class="header-actions">
                     <button class="btn btn-secondary btn-sm" id="theme-toggle-btn">
@@ -87,7 +99,7 @@
             <div class="content-body">
                 
                 <!-- 1. DASHBOARD & ANALYTICS TAB -->
-                <section class="tab-pane active" id="tab-dashboard">
+                <section class="tab-pane {% if active_tab == 'dashboard' or not active_tab %}active{% endif %}" id="tab-dashboard">
                     
                     <!-- KPI Cards Grid (6 cards, 3 per row) -->
                     <div class="kpi-grid">
@@ -195,7 +207,7 @@
 
 
                 <!-- 2. SCANNER & INGESTION TAB -->
-                <section class="tab-pane" id="tab-scanner">
+                <section class="tab-pane {% if active_tab == 'scanner' %}active{% endif %}" id="tab-scanner">
                     <div class="scanner-container">
                         
                         <!-- Missing API Key Warning Banner -->
@@ -283,13 +295,13 @@
                                 <table class="data-table">
                                     <thead>
                                         <tr>
-                                            <th style="width: 5%; text-align: center;">#</th>
-                                            <th style="width: 28%;">Référence</th>
-                                            <th style="width: 24%;">Marque (Sélection)</th>
+                                            <th style="width: 4%; text-align: center;">#</th>
+                                            <th style="width: 26%;">Référence</th>
+                                            <th style="width: 22%;">Marque (Sélection)</th>
                                             <th style="width: 13%;">Quantité (pcs)</th>
-                                            <th style="width: 14%;">Prix Unitaire</th>
-                                            <th style="width: 11%;">Sous-Total</th>
-                                            <th style="width: 5%; text-align: center;">Action</th>
+                                            <th style="width: 13%;">Prix Unitaire</th>
+                                            <th style="width: 12%;">Sous-Total</th>
+                                            <th style="width: 10%; text-align: center;">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody id="results-table-body">
@@ -319,7 +331,7 @@
 
 
                 <!-- 3. SCAN BY DEPOT (MAGAZA) TAB -->
-                <section class="tab-pane" id="tab-magaza">
+                <section class="tab-pane {% if active_tab == 'magaza' %}active{% endif %}" id="tab-magaza">
                     <div class="scanner-container">
                         
                         <!-- Missing API Key Warning Banner -->
@@ -408,13 +420,13 @@
                                     <thead>
                                         <tr>
                                             <th style="width: 4%; text-align: center;">#</th>
-                                            <th style="width: 24%;">Référence</th>
-                                            <th style="width: 20%;">Marque (Sélection)</th>
-                                            <th style="width: 17%; color: var(--accent-blue);">Dépôt (Magaza)</th>
+                                            <th style="width: 22%;">Référence</th>
+                                            <th style="width: 18%;">Marque (Sélection)</th>
+                                            <th style="width: 16%; color: var(--accent-blue);">Dépôt (Magaza)</th>
                                             <th style="width: 11%;">Quantité</th>
-                                            <th style="width: 12%;">Prix Unitaire</th>
-                                            <th style="width: 12%;">Sous-Total</th>
-                                            <th style="width: 5%; text-align: center;">Action</th>
+                                            <th style="width: 11%;">Prix Unitaire</th>
+                                            <th style="width: 9%;">Sous-Total</th>
+                                            <th style="width: 9%; text-align: center;">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody id="results-table-body-magaza">
@@ -447,7 +459,7 @@
 
 
                 <!-- 4. ARCHIVE TAB -->
-                <section class="tab-pane" id="tab-archive">
+                <section class="tab-pane {% if active_tab == 'archive' %}active{% endif %}" id="tab-archive">
                     <div class="card">
                         <div class="card-header">
                             <div>
@@ -480,8 +492,8 @@
                     </div>
                 </section>
 
-                <!-- 4. SETTINGS TAB -->
-                <section class="tab-pane" id="tab-settings">
+                <!-- 5. SETTINGS TAB -->
+                <section class="tab-pane {% if active_tab == 'settings' %}active{% endif %}" id="tab-settings">
                     <div style="max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px;">
                         
                         <!-- CARD 1: AI Key Configuration -->

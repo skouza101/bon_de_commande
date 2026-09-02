@@ -118,9 +118,37 @@ class TestKeyRequest(BaseModel):
 # Web Page Route
 # ---------------------------------------------------------------------------
 
+PAGE_TAB_MAP = {
+    "/": "dashboard",
+    "/home": "dashboard",
+    "/dashboard": "dashboard",
+    "/scanner": "scanner",
+    "/scan": "scanner",
+    "/magaza": "magaza",
+    "/depot": "magaza",
+    "/archive": "archive",
+    "/history": "archive",
+    "/historique": "archive",
+    "/settings": "settings",
+    "/parametres": "settings",
+}
+
 @app.get("/", response_class=HTMLResponse)
+@app.get("/home", response_class=HTMLResponse)
+@app.get("/dashboard", response_class=HTMLResponse)
+@app.get("/scanner", response_class=HTMLResponse)
+@app.get("/scan", response_class=HTMLResponse)
+@app.get("/magaza", response_class=HTMLResponse)
+@app.get("/depot", response_class=HTMLResponse)
+@app.get("/archive", response_class=HTMLResponse)
+@app.get("/history", response_class=HTMLResponse)
+@app.get("/historique", response_class=HTMLResponse)
+@app.get("/settings", response_class=HTMLResponse)
+@app.get("/parametres", response_class=HTMLResponse)
 async def serve_dashboard(request: Request):
-    """Serve the main Single Page Application dashboard."""
+    """Serve the dashboard application with the appropriate active page."""
+    path = request.url.path.rstrip("/") or "/"
+    active_tab = PAGE_TAB_MAP.get(path, "dashboard")
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
@@ -133,6 +161,7 @@ async def serve_dashboard(request: Request):
             "ai_provider": settings.ai_provider,
             "gemini_configured": bool(settings.gemini_api_key and settings.gemini_api_key.strip()),
             "deepseek_configured": bool(settings.deepseek_api_key and settings.deepseek_api_key.strip()),
+            "active_tab": active_tab,
         },
     )
 
@@ -382,10 +411,11 @@ async def scan_receipts(
                 },
             )
 
-        # 3. Consolidate matching tyre dimensions and prices
+        # 3. Consolidate into structured summary (keep individual lines unmerged for the interactive table)
         consolidated = consolidate_extractions(
             extractions=valid_extractions,
             client_name_override=client_name,
+            merge_lines=False,
         )
 
         # 4. Generate PDF invoice
@@ -499,6 +529,7 @@ async def scan_receipts_magaza(
         consolidated = consolidate_extractions(
             extractions=valid_extractions,
             client_name_override=client_name,
+            merge_lines=False,
         )
 
         depot_choice = (default_depot or "magaza 1").strip()
@@ -564,8 +595,11 @@ async def recalculate_invoice(invoice_ref: str, payload: RecalculateInvoiceReque
     client_address = payload.client_address if payload.client_address is not None else existing.get("client_address", "")
     transaction_status = payload.transaction_status if payload.transaction_status is not None else existing.get("transaction_status", "En attente")
 
-    merged_items: Dict[str, Dict[str, Any]] = {}
-    for raw_item in payload.items:
+    items: List[ConsolidatedItem] = []
+    total_qty = 0
+    grand_total = 0.0
+
+    for idx, raw_item in enumerate(payload.items, start=1):
         norm_desc = normalize_tyre_description(raw_item.description)
         qty = int(raw_item.quantity)
         price = round(float(raw_item.unit_price), 2)
@@ -575,45 +609,24 @@ async def recalculate_invoice(invoice_ref: str, payload: RecalculateInvoiceReque
         dim, brand = split_dimension_and_brand(norm_desc)
         ref = raw_item.reference or dim or norm_desc
         b_name = raw_item.brand or brand or ""
-
-        key = f"{ref.upper()}|{b_name.upper()}"
-        if key not in merged_items:
-            merged_items[key] = {
-                "description": norm_desc,
-                "reference": ref,
-                "brand": b_name,
-                "depot": raw_item.depot or "magaza 1",
-                "quantity": qty,
-                "unit_price": price,
-            }
-        else:
-            merged_items[key]["quantity"] += qty
-            if price > 0:
-                merged_items[key]["unit_price"] = price
-
-    items: List[ConsolidatedItem] = []
-    total_qty = 0
-    grand_total = 0.0
-
-    for idx, (k, d) in enumerate(merged_items.items(), start=1):
-        qty = d["quantity"]
-        p = d["unit_price"]
-        sub = round(qty * p, 2)
+        sub = round(qty * price, 2)
         total_qty += qty
         grand_total += sub
 
         items.append(
             ConsolidatedItem(
                 index=idx,
-                description=d["description"],
-                reference=d["reference"],
-                brand=d["brand"],
-                depot=d["depot"],
+                description=norm_desc,
+                reference=ref,
+                brand=b_name,
+                depot=raw_item.depot or "magaza 1",
                 quantity=qty,
-                unit_price=p,
+                unit_price=price,
                 subtotal=sub,
             )
         )
+
+    distinct_count = len(set(f"{it.reference.upper()}|{it.brand.upper()}" for it in items))
 
     consolidated = ConsolidatedInvoice(
         invoice_ref=invoice_ref,
@@ -624,7 +637,7 @@ async def recalculate_invoice(invoice_ref: str, payload: RecalculateInvoiceReque
         transaction_status=transaction_status,
         items=items,
         total_quantity=total_qty,
-        distinct_items_count=len(items),
+        distinct_items_count=distinct_count,
         grand_total=round(grand_total, 2),
         source_invoices_count=existing["source_invoices_count"],
     )
@@ -663,8 +676,11 @@ async def recalculate_invoice_magaza(invoice_ref: str, payload: RecalculateInvoi
     client_address = payload.client_address if payload.client_address is not None else existing.get("client_address", "")
     transaction_status = payload.transaction_status if payload.transaction_status is not None else existing.get("transaction_status", "En attente")
 
-    merged_items: Dict[str, Dict[str, Any]] = {}
-    for raw_item in payload.items:
+    items: List[ConsolidatedItem] = []
+    total_qty = 0
+    grand_total = 0.0
+
+    for idx, raw_item in enumerate(payload.items, start=1):
         norm_desc = normalize_tyre_description(raw_item.description)
         qty = int(raw_item.quantity)
         price = round(float(raw_item.unit_price), 2)
@@ -675,45 +691,24 @@ async def recalculate_invoice_magaza(invoice_ref: str, payload: RecalculateInvoi
         ref = raw_item.reference or dim or norm_desc
         b_name = raw_item.brand or brand or ""
         depot_val = (raw_item.depot or "magaza 1").strip()
-
-        key = f"{ref.upper()}|{b_name.upper()}|{depot_val.lower()}"
-        if key not in merged_items:
-            merged_items[key] = {
-                "description": norm_desc,
-                "reference": ref,
-                "brand": b_name,
-                "depot": depot_val,
-                "quantity": qty,
-                "unit_price": price,
-            }
-        else:
-            merged_items[key]["quantity"] += qty
-            if price > 0:
-                merged_items[key]["unit_price"] = price
-
-    items: List[ConsolidatedItem] = []
-    total_qty = 0
-    grand_total = 0.0
-
-    for idx, (k, d) in enumerate(merged_items.items(), start=1):
-        qty = d["quantity"]
-        p = d["unit_price"]
-        sub = round(qty * p, 2)
+        sub = round(qty * price, 2)
         total_qty += qty
         grand_total += sub
 
         items.append(
             ConsolidatedItem(
                 index=idx,
-                description=d["description"],
-                reference=d["reference"],
-                brand=d["brand"],
-                depot=d["depot"],
+                description=norm_desc,
+                reference=ref,
+                brand=b_name,
+                depot=depot_val,
                 quantity=qty,
-                unit_price=p,
+                unit_price=price,
                 subtotal=sub,
             )
         )
+
+    distinct_count = len(set(f"{it.reference.upper()}|{it.brand.upper()}" for it in items))
 
     consolidated = ConsolidatedInvoice(
         invoice_ref=invoice_ref,
@@ -724,7 +719,7 @@ async def recalculate_invoice_magaza(invoice_ref: str, payload: RecalculateInvoi
         transaction_status=transaction_status,
         items=items,
         total_quantity=total_qty,
-        distinct_items_count=len(items),
+        distinct_items_count=distinct_count,
         grand_total=round(grand_total, 2),
         source_invoices_count=existing["source_invoices_count"],
     )

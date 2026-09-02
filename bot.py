@@ -23,7 +23,7 @@ from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
 
 from config import settings
-from consolidator import consolidate_extractions, ConsolidatedInvoice
+from consolidator import consolidate_extractions, ConsolidatedInvoice, merge_invoice_items_for_pdf
 from database import db
 from extractor import extractor, SingleInvoiceExtraction
 from pdf_generator import pdf_generator
@@ -286,7 +286,8 @@ async def handle_invoice_images(message: Message, album_messages: Optional[List[
             logger.warning(f"Failed to record invoice in database: {db_err}")
 
         # 7. Deliver the generated PDF and summary
-        summary_text = format_telegram_summary(consolidated)
+        merged_for_summary = merge_invoice_items_for_pdf(consolidated)
+        summary_text = format_telegram_summary(merged_for_summary)
         pdf_input = FSInputFile(
             path=str(pdf_path),
             filename=pdf_filename,

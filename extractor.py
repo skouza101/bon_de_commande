@@ -134,6 +134,10 @@ Domain Rules & Recognition Guidelines:
    - Do NOT calculate line totals or grand totals—arithmetic is handled in application code.
    - Extract all readable, valid line items.
    - If no valid tyre line items are present, return an empty items list.
+5. Strict Document Line Order Preservation:
+   - CRITICAL: Transcribe and extract all line items in the EXACT top-to-bottom order as they appear on the paper slip/document.
+   - Do NOT sort or rearrange items by dimension, brand, price, or quantity.
+   - The returned `items` list must strictly follow the original line-by-line sequence written on the document from top to bottom.
 """
 
 
@@ -226,7 +230,7 @@ class GeminiVisionExtractor:
 
         prompt = (
             f"{VISION_SYSTEM_PROMPT}\n\n"
-            "Transcribe and extract all tyre line items from this receipt into the structured JSON schema."
+            "Transcribe and extract all tyre line items from this receipt into the structured JSON schema in the EXACT row order as written on the paper document (from top to bottom)."
         )
 
         loop = asyncio.get_running_loop()
@@ -338,7 +342,7 @@ class DeepSeekExtractor:
 
         json_instruction = (
             f"{VISION_SYSTEM_PROMPT}\n\n"
-            "CRITICAL: You MUST respond ONLY with a valid JSON object matching this schema:\n"
+            "CRITICAL: You MUST respond ONLY with a valid JSON object matching this schema. Preserve the exact line-by-line sequence as written on the paper document:\n"
             "{\n"
             '  "invoice_number": null,\n'
             '  "client_name": null,\n'
@@ -359,7 +363,7 @@ class DeepSeekExtractor:
                 "content": [
                     {
                         "type": "text",
-                        "text": "Transcribe and extract all tyre line items from this delivery slip into valid JSON.",
+                        "text": "Transcribe and extract all tyre line items from this delivery slip into valid JSON in the exact order as written on the document from top to bottom.",
                     },
                     {
                         "type": "image_url",

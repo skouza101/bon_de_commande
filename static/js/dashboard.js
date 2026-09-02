@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ----------------------------------------------------------------------
-    // Tab Navigation
+    // Tab Navigation & Real URL Routing (/home, /scanner, /magaza, /archive, /settings)
     // ----------------------------------------------------------------------
     const tabHeaders = {
         dashboard: { title: "Tableau de Bord & Métriques", sub: "Vue d'ensemble de l'activité, chiffre d'affaires et statistiques pneumatiques" },
@@ -163,7 +163,30 @@ document.addEventListener('DOMContentLoaded', () => {
         settings: { title: "Paramètres & Configuration", sub: "Personnalisation des mentions légales, fournisseur IA et clés d'accès" },
     };
 
-    function switchTab(tabId) {
+    const tabUrls = {
+        dashboard: '/home',
+        scanner: '/scanner',
+        magaza: '/magaza',
+        archive: '/archive',
+        settings: '/settings',
+    };
+
+    const urlToTab = {
+        '/': 'dashboard',
+        '/home': 'dashboard',
+        '/dashboard': 'dashboard',
+        '/scanner': 'scanner',
+        '/scan': 'scanner',
+        '/magaza': 'magaza',
+        '/depot': 'magaza',
+        '/archive': 'archive',
+        '/history': 'archive',
+        '/historique': 'archive',
+        '/settings': 'settings',
+        '/parametres': 'settings',
+    };
+
+    function switchTab(tabId, updateUrl = true) {
         state.currentTab = tabId;
         navItems.forEach(item => {
             if (item.dataset.tab === tabId) item.classList.add('active');
@@ -180,6 +203,13 @@ document.addEventListener('DOMContentLoaded', () => {
             headerSubtitle.textContent = tabHeaders[tabId].sub;
         }
 
+        if (updateUrl) {
+            const targetUrl = tabUrls[tabId] || '/home';
+            if (window.location.pathname !== targetUrl) {
+                window.history.pushState({ tab: tabId }, '', targetUrl);
+            }
+        }
+
         if (tabId === 'dashboard') loadAnalytics();
         if (tabId === 'scanner') checkScannerKeyStatus();
         if (tabId === 'magaza') checkMagazaKeyStatus();
@@ -190,20 +220,26 @@ document.addEventListener('DOMContentLoaded', () => {
     navItems.forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
-            switchTab(item.dataset.tab);
+            switchTab(item.dataset.tab, true);
         });
+    });
+
+    window.addEventListener('popstate', (e) => {
+        const path = window.location.pathname.replace(/\/$/, '') || '/';
+        const tab = (e.state && e.state.tab) || urlToTab[path] || 'dashboard';
+        switchTab(tab, false);
     });
 
     if (gotoSettingsBtn) {
         gotoSettingsBtn.addEventListener('click', () => {
-            switchTab('settings');
+            switchTab('settings', true);
         });
     }
 
     const gotoSettingsBtnMagaza = document.getElementById('goto-settings-btn-magaza');
     if (gotoSettingsBtnMagaza) {
         gotoSettingsBtnMagaza.addEventListener('click', () => {
-            switchTab('settings');
+            switchTab('settings', true);
         });
     }
 
@@ -770,30 +806,34 @@ document.addEventListener('DOMContentLoaded', () => {
         const parsed = parseDescription(desc);
 
         tr.innerHTML = `
-            <td style="width: 5%; text-align: center; color: var(--text-muted); font-weight: bold;">${idxNum}</td>
-            <td style="width: 28%;">
+            <td style="width: 4%; text-align: center; color: var(--text-muted); font-weight: bold;">${idxNum}</td>
+            <td style="width: 26%;">
                 <input type="text" class="table-input row-dim" value="${parsed.dimension}" placeholder="ex: 175/70 R13" />
             </td>
-            <td style="width: 24%;">
+            <td style="width: 22%;">
                 ${buildBrandSelectHtml(parsed.brand)}
             </td>
             <td style="width: 13%;">
                 <input type="number" class="table-input row-qty" value="${qty}" min="1" step="1" />
             </td>
-            <td style="width: 14%;">
+            <td style="width: 13%;">
                 <input type="number" class="table-input row-price" value="${price}" min="0" step="0.5" />
             </td>
-            <td style="width: 11%; font-weight: bold;" class="row-subtotal">
+            <td style="width: 12%; font-weight: bold;" class="row-subtotal">
                 ${Number(subtotal).toFixed(2)} ${state.currency}
             </td>
-            <td style="width: 5%; text-align: center;">
-                <button class="btn btn-rose btn-sm row-del-btn" title="Supprimer la ligne"><i data-lucide="trash-2"></i></button>
+            <td style="width: 10%; text-align: center; white-space: nowrap;">
+                <button type="button" class="btn btn-secondary btn-sm row-up-btn" title="Monter" style="padding: 3px 6px; margin-right: 2px;"><i data-lucide="chevron-up"></i></button>
+                <button type="button" class="btn btn-secondary btn-sm row-down-btn" title="Descendre" style="padding: 3px 6px; margin-right: 2px;"><i data-lucide="chevron-down"></i></button>
+                <button type="button" class="btn btn-rose btn-sm row-del-btn" title="Supprimer la ligne" style="padding: 3px 6px;"><i data-lucide="trash-2"></i></button>
             </td>
         `;
 
         const qtyInput = tr.querySelector('.row-qty');
         const priceInput = tr.querySelector('.row-price');
         const subtotalCell = tr.querySelector('.row-subtotal');
+        const upBtn = tr.querySelector('.row-up-btn');
+        const downBtn = tr.querySelector('.row-down-btn');
         const delBtn = tr.querySelector('.row-del-btn');
 
         function recalculateRow() {
@@ -806,6 +846,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         qtyInput.addEventListener('input', recalculateRow);
         priceInput.addEventListener('input', recalculateRow);
+
+        upBtn.addEventListener('click', () => {
+            const prev = tr.previousElementSibling;
+            if (prev) {
+                tr.parentNode.insertBefore(tr, prev);
+                updateTableTotals();
+            }
+        });
+
+        downBtn.addEventListener('click', () => {
+            const next = tr.nextElementSibling;
+            if (next) {
+                tr.parentNode.insertBefore(next, tr);
+                updateTableTotals();
+            }
+        });
 
         delBtn.addEventListener('click', () => {
             tr.remove();
@@ -1211,26 +1267,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tr.innerHTML = `
             <td style="width: 4%; text-align: center; color: var(--text-muted); font-weight: bold;">${idxNum}</td>
-            <td style="width: 24%;">
+            <td style="width: 22%;">
                 <input type="text" class="table-input row-dim" value="${parsed.dimension}" placeholder="ex: 175/70 R13" />
             </td>
-            <td style="width: 20%;">
+            <td style="width: 18%;">
                 ${buildBrandSelectHtml(parsed.brand)}
             </td>
-            <td style="width: 17%;">
+            <td style="width: 16%;">
                 ${buildDepotSelectHtml(depot)}
             </td>
             <td style="width: 11%;">
                 <input type="number" class="table-input row-qty" value="${qty}" min="1" step="1" />
             </td>
-            <td style="width: 12%;">
+            <td style="width: 11%;">
                 <input type="number" class="table-input row-price" value="${price}" min="0" step="0.5" />
             </td>
-            <td style="width: 12%; font-weight: bold;" class="row-subtotal">
+            <td style="width: 9%; font-weight: bold;" class="row-subtotal">
                 ${Number(subtotal).toFixed(2)} ${state.currency}
             </td>
-            <td style="width: 5%; text-align: center;">
-                <button class="btn btn-rose btn-sm row-del-btn" title="Supprimer la ligne"><i data-lucide="trash-2"></i></button>
+            <td style="width: 9%; text-align: center; white-space: nowrap;">
+                <button type="button" class="btn btn-secondary btn-sm row-up-btn" title="Monter" style="padding: 3px 6px; margin-right: 2px;"><i data-lucide="chevron-up"></i></button>
+                <button type="button" class="btn btn-secondary btn-sm row-down-btn" title="Descendre" style="padding: 3px 6px; margin-right: 2px;"><i data-lucide="chevron-down"></i></button>
+                <button type="button" class="btn btn-rose btn-sm row-del-btn" title="Supprimer la ligne" style="padding: 3px 6px;"><i data-lucide="trash-2"></i></button>
             </td>
         `;
 
@@ -1238,6 +1296,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const priceInput = tr.querySelector('.row-price');
         const depotSelect = tr.querySelector('.row-depot');
         const subtotalCell = tr.querySelector('.row-subtotal');
+        const upBtn = tr.querySelector('.row-up-btn');
+        const downBtn = tr.querySelector('.row-down-btn');
         const delBtn = tr.querySelector('.row-del-btn');
 
         function recalculateRow() {
@@ -1251,6 +1311,22 @@ document.addEventListener('DOMContentLoaded', () => {
         qtyInput.addEventListener('input', recalculateRow);
         priceInput.addEventListener('input', recalculateRow);
         depotSelect.addEventListener('change', updateMagazaTableTotals);
+
+        upBtn.addEventListener('click', () => {
+            const prev = tr.previousElementSibling;
+            if (prev) {
+                tr.parentNode.insertBefore(tr, prev);
+                updateMagazaTableTotals();
+            }
+        });
+
+        downBtn.addEventListener('click', () => {
+            const next = tr.nextElementSibling;
+            if (next) {
+                tr.parentNode.insertBefore(next, tr);
+                updateMagazaTableTotals();
+            }
+        });
 
         delBtn.addEventListener('click', () => {
             tr.remove();
@@ -1753,7 +1829,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialization
     // ----------------------------------------------------------------------
     initTheme();
-    loadAnalytics();
     loadSettings();
+    const currentPath = window.location.pathname.replace(/\/$/, '') || '/';
+    const initialTab = urlToTab[currentPath] || 'dashboard';
+    switchTab(initialTab, false);
     refreshIcons();
 });
