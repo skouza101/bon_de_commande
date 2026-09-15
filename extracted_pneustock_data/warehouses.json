@@ -1,0 +1,50 @@
+[
+  {
+    "id": "MOR2511150923W1",
+    "name": "magaza 1",
+    "address": {
+      "id": "9ea3c5ef-2fac-40f0-93dc-97fd248cfc08",
+      "street": "LAATATRA",
+      "city": "Sidi Bennour"
+    },
+    "currentStock": 2387,
+    "totalCapacity": 10000,
+    "currentCapital": 1544787.02
+  },
+  {
+    "id": "MOR2511150923W2",
+    "name": "magaza 2",
+    "address": {
+      "id": "3b66cfa8-d321-4630-ba2a-d6499a60a7b2",
+      "street": "Avenue Amgala",
+      "city": "Sidi Bennour"
+    },
+    "currentStock": 866,
+    "totalCapacity": 10000,
+    "currentCapital": 676620.06
+  },
+  {
+    "id": "MOR2511150923W3",
+    "name": "magaza 3",
+    "address": {
+      "id": "69b8bb20-1417-4bde-9b0c-0a4e7152d09f",
+      "street": "Souk Lakdim",
+      "city": "Sidi Bennour"
+    },
+    "currentStock": 1121,
+    "totalCapacity": 10000,
+    "currentCapital": 685555.03
+  },
+  {
+    "id": "MOR2511150923W4",
+    "name": "magaza 4",
+    "address": {
+      "id": "21c6557b-eac5-4353-bbd7-bd166a3de072",
+      "street": "LAATATRA (Abdelkader)",
+      "city": "Sidi Bennour"
+    },
+    "currentStock": 1030,
+    "totalCapacity": 10000,
+    "currentCapital": 600965.0
+  }
+]

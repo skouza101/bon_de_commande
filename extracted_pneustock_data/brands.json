@@ -1,0 +1,1016 @@
+[
+  {
+    "id": "ca3dab25-a1f4-4333-b9e4-29cdc53abd67",
+    "name": "Doubleking",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "27491057-c6a8-480b-8495-0754751292f6",
+    "name": "Goodride",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "b8dbc64c-4d5e-408f-bae7-7f607d20fb8b",
+    "name": "Michelin",
+    "country": "Spain",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "33ed080b-787f-4db8-84bb-e1683525b13c",
+    "name": "Falken",
+    "country": "Japan",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "03978139-65b0-471f-aea5-80f3f40c17b3",
+    "name": "Constancy",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "69ce4c9e-10cd-436c-b999-03dac005a56f",
+    "name": "Autogreen",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "7a049399-4df1-4494-8843-146923102d5e",
+    "name": "Amine",
+    "country": "Tunisia",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "82919b2f-a8c7-4115-a781-d490ed96827f",
+    "name": "Fulda",
+    "country": "Germany",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "eff0d947-516d-47a9-87cf-01ba83cf361f",
+    "name": "Comforser",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "fcf31d70-db9c-45c6-9660-f3f95fbba896",
+    "name": "Federal",
+    "country": "Taiwan, Province of China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "fcbef05b-e6db-40bf-a770-bcc468a2f77b",
+    "name": "MAHLE",
+    "country": "Germany",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "952fa4a6-8c65-4491-bfcb-127f7640b177",
+    "name": "Austone",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "22f48415-6e33-4fbe-88a3-8f4dcee38e8b",
+    "name": "Goodmax",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "cf74cf38-c6f4-47b8-bfeb-4d65a2598d1a",
+    "name": "Torque",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "2becd18a-9cee-476b-8e5f-fcc3db38f82e",
+    "name": "Evergreen",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "76281fe6-405f-4937-94dc-95dc0615560d",
+    "name": "Nankang",
+    "country": "Taiwan, Province of China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "4648282d-efff-4333-9254-173aa5399c6c",
+    "name": "Sailun",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "4bd89dd5-8117-4a68-8bbf-521fa08ab885",
+    "name": "Poto",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "a228807a-778c-49ff-b719-c848f0c43957",
+    "name": "Dayton",
+    "country": "United States",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "b78babf0-aefb-42b6-9d67-72b91a90a3b0",
+    "name": "Lassa(Atracta)",
+    "country": "Turkey",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "02c55a7a-6077-4c22-bb78-e01eeb3b2f15",
+    "name": "Sunny",
+    "country": "Turkey",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "80f7c9bc-b5e0-46e1-829d-25793a4c34eb",
+    "name": "Delinte",
+    "country": "Turkey",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "ec5f9a42-a566-4fca-97e9-f86631fbb0c1",
+    "name": "Roadshine",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "ebd1867c-b86e-4bb7-9a4c-ceb9512f6cdd",
+    "name": "Infinity",
+    "country": "United Arab Emirates",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "e722cdf8-187b-41a2-acdc-1fd4208a792a",
+    "name": "Wanli",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "6592b8ed-0dd9-46e5-ae45-e5780ead52c0",
+    "name": "Kitab",
+    "country": "Albania",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "d43aef2f-16a1-4c28-a087-292e39ed63fb",
+    "name": "Aplus",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "3e36056b-ca93-45c0-af98-3fa11158594b",
+    "name": "Avantech",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "125ecc26-febf-4de4-bf4e-ae2641868f2a",
+    "name": "Yellowsea",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "eba7d6b6-dd98-443d-847e-1fa8b57af8f2",
+    "name": "Vredestein",
+    "country": "Netherlands",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "1f464527-872b-4a45-9e2f-af3d7cdc6c04",
+    "name": "Ovation",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "d291ac4b-6517-45f3-b706-08bf09c7986d",
+    "name": "Nokian",
+    "country": "Finland",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "23a3888c-a04e-4d04-8e80-57c79e67f552",
+    "name": "TIANFU",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "df30ae31-ddfc-4c67-b55d-22c7b5609579",
+    "name": "Tristar",
+    "country": "Belgium",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "fdb7c53a-aab2-42e0-ba45-a75890481ca7",
+    "name": "Zeta",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "46feb8f6-c0af-4ca0-a45f-485675168335",
+    "name": "Kumho",
+    "country": "Korea, Republic of",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "5376aa5b-4853-42fd-b88b-bb7c2def7790",
+    "name": "Chengshan",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "bfa4b94d-0728-46fc-a50f-05a765d56bf9",
+    "name": "Montreal",
+    "country": "Canada",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "541e9cf8-4258-46fb-a3dd-1b4fbd67f046",
+    "name": "DVR",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "5842e3ad-b5a0-44c4-ad18-4a9b89b3849d",
+    "name": "Longmarch",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "d6119d29-90f7-4261-8e06-c71ba1b0676b",
+    "name": "Gremax",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "4170398a-e48a-453c-aa8b-2250ea4e8f75",
+    "name": "BFGoodrich",
+    "country": "United States",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "e085d428-51ea-468c-94e4-72e300e6ff47",
+    "name": "temsen",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "82c10f9f-ef7d-4200-be30-00a7ed396e34",
+    "name": "MRF",
+    "country": "India",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "0fbfbffc-3489-4c4e-b12f-bb845d9a9dea",
+    "name": "Gislaved",
+    "country": "Sweden",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "febea79b-e0c8-4f93-b6dc-2694eba2d635",
+    "name": "Linglong",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "a5feed6d-6a69-430c-9bcb-d5b208adc1c5",
+    "name": "Kia",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "bf1f80bd-5eca-4106-921b-1c0c0a32be2c",
+    "name": "Rotalla",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "5c37253f-96c3-45d6-84a5-dbf060718c24",
+    "name": "Double Coin",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "6ff1159f-74ff-497c-8559-690e45b6816a",
+    "name": "Giti",
+    "country": "India",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "0b86198d-5d3b-4946-a900-14e4348506e9",
+    "name": "Uniroyal",
+    "country": "Germany",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "0713b835-8422-426a-bf45-2e74e6b321a6",
+    "name": "Intertrac",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "70cce2e4-d835-4ac6-89ee-1d26fafa725b",
+    "name": "Starmaxx",
+    "country": "Turkey",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "466a69fc-eed3-4bb0-ad88-911e2dd3291f",
+    "name": "Eage",
+    "country": "United States",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "9fa89011-ea87-4681-9177-c1d2eb24f265",
+    "name": "Firestone",
+    "country": "United States",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "6ddcbbde-9605-40a6-b4e0-a4463e23c5d8",
+    "name": "Cooper",
+    "country": "United States",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "9e5b67b3-720c-4dc1-8002-93940224abf1",
+    "name": "Insa Turbo",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "a7a27c04-6fec-4400-8d3c-986b5474fd90",
+    "name": "Superia",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "67d31ecc-ca8e-4932-8405-233238d3908f",
+    "name": "zeetex",
+    "country": "Indonesia",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "5e1261e0-e0cb-416a-bfd3-5174440b3578",
+    "name": "Premiorri",
+    "country": "Ukraine",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "df522e7e-cdd0-450e-a786-35fcfdd68dc5",
+    "name": "SAILUN",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "4f1f28fd-07b8-43e0-8895-b679c6a4e781",
+    "name": "Yokohama",
+    "country": "Japan",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "863399dc-d151-4316-8916-97171403d6e0",
+    "name": "Pace",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "fb67b51e-dac3-4d39-9d6e-abe65bc61453",
+    "name": "Apollo",
+    "country": "India",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "12098d70-61c2-4314-9220-3029957e796a",
+    "name": "Dunlop",
+    "country": "United Kingdom",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "b19d956a-dd00-498d-8378-25e892effec3",
+    "name": "Sumitomo",
+    "country": "Japan",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "00a3a24c-3bbf-4ca5-9836-f2295d6eec6a",
+    "name": "Kyle",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "b6fccace-f550-46ce-9d15-d23eb450fd0b",
+    "name": "Petlas (Simple)",
+    "country": "Turkey",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "695ac66f-153f-4363-97eb-f23e20e45091",
+    "name": "Roadcruza",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "4ef71b40-ff3b-4926-8029-c9a9531ae84d",
+    "name": "Windforce",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "4ea49cb4-5a0a-4833-8e91-eca1b47f0df7",
+    "name": "Petlas",
+    "country": "Turkey",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "0d50c1ae-c029-434a-8d13-8bf5217436f4",
+    "name": "Roadlux",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "6910f496-cba6-421c-8c88-4d0f2b87b301",
+    "name": "Riken",
+    "country": "Japan",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "60461d4f-a392-44de-a8f0-04ba1757a982",
+    "name": "Joyroad",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "22b2f2d2-7303-4548-a8fe-e0924cda3eb2",
+    "name": "Tomket",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "993054b9-0f40-4c55-aa93-ae981d85152f",
+    "name": "Aufine",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "7ab56261-cb39-443f-a8bf-2e8ba7185f22",
+    "name": "QUALITY",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "fefed2ae-2033-453c-97ec-38b284972def",
+    "name": "Tracmax",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "999b09bd-674c-4f0c-ac62-7758c64e758a",
+    "name": "Westlake",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "de23a247-4865-464c-bdf6-f91f39dd9d9a",
+    "name": "Pirelli",
+    "country": "Italy",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "f853650b-16af-4daf-aabb-08a261edf4ea",
+    "name": "Blacklion",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "226135d1-90aa-47d9-a39e-497b0f68ded0",
+    "name": "Viking",
+    "country": "Germany",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "f2c3d75e-aa83-4d7c-9d81-3a3fea048b03",
+    "name": "Milestone ",
+    "country": "Italy",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "a2524b77-5594-4f68-8819-0d6d2f132122",
+    "name": "Lassa(Green)",
+    "country": "Turkey",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "beb1ac5c-fc5c-4b7d-b7c1-4eaf8089249f",
+    "name": "Goodyear",
+    "country": "United States",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "85791138-1472-4b7a-a083-e47c83277f66",
+    "name": "Hankook(multi D)",
+    "country": "Hungary",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "3d15ba6e-f704-4ac9-8c7b-8b1bfbf917ab",
+    "name": "GOLDEN CROWN",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "575d8a36-99d9-477b-b9fb-9507b68b9550",
+    "name": "Landspider",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "4577a191-35bd-4ccd-8ad4-612f8bdda342",
+    "name": "Boto",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "00f61240-fe9d-4f94-bfaa-df9cf67f7215",
+    "name": "Yinbao",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "9e25255e-6f9b-4819-b44a-c78ab73c7177",
+    "name": "Laufenn",
+    "country": "Korea, Republic of",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "2b1ab919-4f64-43b1-9553-66ec58a69be1",
+    "name": "Roadstone",
+    "country": "Korea, Republic of",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "bf70d09b-abc8-4187-934e-392a317db7bf",
+    "name": "waterfall",
+    "country": "Turkey",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "5be7a865-23e2-4239-8e6c-d3e12d242bc3",
+    "name": "Leufenn",
+    "country": "Hungary",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "a52c2c2b-8591-4e50-bb58-92021d7bf91c",
+    "name": "Keter",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "176cbc3d-a2d3-40e5-b348-b5b354abb0b6",
+    "name": "Rockblade",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "8d542b67-37f0-482f-b3ec-0c71f81110eb",
+    "name": "Hifly",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "a10390ba-accd-45b4-aa76-0d5b099c5c0d",
+    "name": "Berlin",
+    "country": "Germany",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "e76ea68e-4672-47cb-a164-463d7ee58185",
+    "name": "Voyageur",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "230988aa-3da8-4bd9-8db1-af3e77977ce2",
+    "name": "Advance",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "361e73a1-a000-4e83-8abf-e1037454759f",
+    "name": "x",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "f545af61-2bc7-4cf9-87cb-9aa81ea5668d",
+    "name": "Kenda",
+    "country": "Taiwan, Province of China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "b8a2ab38-5554-4c1d-8148-022bb7b8f348",
+    "name": "DELINTE (D9D9)",
+    "country": "Turkey",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "e935d162-88fc-486d-b91d-f0e44e7575fa",
+    "name": "Durun",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "7fb51bd5-6a83-4920-9c20-be84ad7d36f5",
+    "name": "Sunfull",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "55f31582-0bfa-473e-b391-a14a475455a6",
+    "name": "Achilles",
+    "country": "Turkey",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "491d1ae2-36ec-48c3-b2cc-40ae450ff8f8",
+    "name": "Jurwide",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "7282e596-269b-4a66-a765-2a034e2b4eb7",
+    "name": "Leao",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "c5bebdaa-fe2a-449c-baaf-268944c22ddb",
+    "name": "Roadking",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "75053c8d-c5ed-4530-b9a6-1a32824e821f",
+    "name": "Barum",
+    "country": "Czech Republic",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "a66bb0b9-a4fe-49cc-8515-3287a813568b",
+    "name": "Headway",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "4dadf292-f183-4c0e-84d3-80d395b65a19",
+    "name": "Taurus",
+    "country": "Hungary",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "9fe375e8-db14-4534-890c-205854f06e9a",
+    "name": "Debica",
+    "country": "Poland",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "84b2bf0f-3102-4572-9020-c9297cc408c7",
+    "name": "Doublestar",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "8e8b8e1f-b32d-44e0-bf1b-9cb21556c117",
+    "name": "Bridgestone",
+    "country": "Japan",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "a82e1cde-0981-4883-a23e-aa6aeddb9cee",
+    "name": "Zita",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "51c3b4a8-eeb5-48d6-b19b-6933dd622de8",
+    "name": "Rapid",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "cd627138-c1b9-4592-83fa-d67b3d038545",
+    "name": "Kelly",
+    "country": "United States",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "423cf48a-5ef5-4ed2-8429-912fd357af61",
+    "name": "Matador",
+    "country": "Slovakia",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "efdd36a1-27cf-48c7-b4f1-30e85725651e",
+    "name": "Aeolus",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "ee533a6b-ea00-41e4-9a49-9fbe7b051324",
+    "name": "Runway",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "9dfd7621-35bd-46aa-9af3-eb8f13730f25",
+    "name": "Petlas Muti D",
+    "country": "Turkey",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "2c94b847-0ed3-4c18-a53c-80b7f6a00bce",
+    "name": "Lassa",
+    "country": "Turkey",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "3ec970ca-7723-4fdb-aa71-df1f0e44e9e3",
+    "name": "Duraturn",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "bd20e2cc-8095-4941-84f7-6e0a8cb09cd0",
+    "name": "General Tire",
+    "country": "United States",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "f87ca2a3-7c91-46a6-900a-7da91c5474ba",
+    "name": "Habilead",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "c6db3cca-3ac4-4b6f-9c90-0a0dc91e6e17",
+    "name": "Ceat",
+    "country": "India",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "9b59705f-f2c5-4872-beac-0986e412af15",
+    "name": "Roadx",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "39e94d01-8c9e-4593-91aa-f206eeaac657",
+    "name": "Annaite",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "31c9fd4a-f0d3-42ea-a3df-3389a24d1742",
+    "name": "Jinyu",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "34246ce9-d67a-46ae-a440-420bca8af024",
+    "name": "Continental",
+    "country": "Germany",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "0f8999a6-311b-4281-b127-8e954b2fe933",
+    "name": "Nexen",
+    "country": "Korea, Republic of",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "0c438ad4-40d2-45d4-a1dd-52756146a062",
+    "name": "Seha",
+    "country": "Turkey",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "70184c68-1f36-4500-a9d1-da3bdd23301b",
+    "name": "Event",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "5b79a17a-d9d0-492c-81ec-6cc2a4277b73",
+    "name": "Michelin",
+    "country": "France",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "efbc74f8-5c01-4af0-a6c9-28542ab384f4",
+    "name": "Trazano",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "899431c8-7ea5-432f-8158-a8140504a45c",
+    "name": "Birla",
+    "country": "India",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "e7fb5150-b004-417c-b756-30483245b5b1",
+    "name": "Kapsen",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "45068335-f752-46b9-8a17-56d1bc35d4d3",
+    "name": "Kingrun",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "f639438a-f4c1-44f5-bc2b-a622e985c31d",
+    "name": "Altenzo",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "68d220de-cc0f-422a-91e7-d382e072c8ce",
+    "name": "Sava",
+    "country": "Slovenia",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "a602e69c-9679-4d64-ab21-cccbb2562d11",
+    "name": "Accelera",
+    "country": "Indonesia",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "e4865ad3-aebf-4b25-9d60-40ff3327d80f",
+    "name": "GT Radial",
+    "country": "Singapore",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "a7a10925-7ea4-4088-91aa-a1a11ee5dbf7",
+    "name": "Maxxis",
+    "country": "Taiwan, Province of China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "b35b381e-9734-42f2-bd7c-de963fe55b59",
+    "name": "CITY STAR",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "11d8ca28-aa4b-4be7-b407-7e135df3ef9c",
+    "name": "Funtoma",
+    "country": "Turkey",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "d61d5e5d-4725-4548-80f9-49983f9b441b",
+    "name": "LANDSAIL ",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "ee904ce4-a6b5-4d7d-bcb7-fa735e4d37ff",
+    "name": "Cachland",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "16557eeb-cbcb-4bce-a96a-4ab3d99cd93f",
+    "name": "JK Tyre",
+    "country": "India",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "72fcfdc6-6543-4e46-a9f3-4158b4f5dc61",
+    "name": "Marshal",
+    "country": "Korea, Republic of",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "b5e06e45-4b78-4476-805e-41023e7dd563",
+    "name": "Kormoran",
+    "country": "Turkey",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "2ff91875-0bf1-4485-be1a-a80c38baa345",
+    "name": "Kleber",
+    "country": "France",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "3817a101-228c-4cde-8a04-fccaddc94feb",
+    "name": "Haida",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "577da74f-2596-4923-8305-23a2da7d3d2a",
+    "name": "Minerva",
+    "country": "Belgium",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "1795cd94-c9ef-45e2-b242-e45a0263717f",
+    "name": "Triangle",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "29160a48-a116-4edf-9c1f-b5c7672d35f6",
+    "name": "SATUGA",
+    "country": "China",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "5b52fd44-fe5a-48df-8347-008a451ff752",
+    "name": "Momo",
+    "country": "Italy",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "c63e24fb-6706-4416-aba1-15ad5dbc9157",
+    "name": "Toyo",
+    "country": "Japan",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "cdb31425-7c45-45da-a219-135fdec44ba0",
+    "name": "Fronway",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "73d9b5ef-d4f6-4c71-9bb9-f80b6d83d968",
+    "name": "Fortune",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "2537bbdb-5de9-48b0-b0b4-1397ce202d75",
+    "name": "Semperit",
+    "country": "Austria",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "27cacd04-7558-4110-9409-91b3856b1e05",
+    "name": "Goalstar",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "7e53de61-bbf8-4be8-aefc-9d15a6bd0926",
+    "name": "Lassa(Revola)",
+    "country": "Turkey",
+    "manufacturerYear": 2026
+  },
+  {
+    "id": "1cc70144-1a14-4175-b82b-7499d043c386",
+    "name": "Farroad",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "37a83ce7-332e-4b86-8d11-8b24f2c086a1",
+    "name": "Transking",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "c10b174a-9e69-4023-9ffa-a7ddbe8ddcfc",
+    "name": "Lanvigator",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "af047f17-26fa-43af-98ea-336366e739b0",
+    "name": "Powertrac",
+    "country": "China",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "5e2b8910-5925-42fb-ac33-25209e94496c",
+    "name": "Hankook",
+    "country": "Hungary",
+    "manufacturerYear": 2025
+  },
+  {
+    "id": "70712aef-a6de-4c9e-87ac-637fcd0db47a",
+    "name": "Techking",
+    "country": "China",
+    "manufacturerYear": 2025
+  }
+]

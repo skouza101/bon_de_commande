@@ -38,6 +38,7 @@ from consolidator import (
 from database import db
 from extractor import extractor, SingleInvoiceExtraction, VisionExtractionError
 from pdf_generator import pdf_generator
+import stock_service
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -149,6 +150,8 @@ async def serve_dashboard(request: Request):
     """Serve the dashboard application with the appropriate active page."""
     path = request.url.path.rstrip("/") or "/"
     active_tab = PAGE_TAB_MAP.get(path, "dashboard")
+    cached_stock = stock_service.get_cached_stock()
+    total_stock_qty = sum(it.get("stock_quantity", 0) for it in cached_stock)
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
@@ -162,6 +165,8 @@ async def serve_dashboard(request: Request):
             "gemini_configured": bool(settings.gemini_api_key and settings.gemini_api_key.strip()),
             "deepseek_configured": bool(settings.deepseek_api_key and settings.deepseek_api_key.strip()),
             "active_tab": active_tab,
+            "total_stock_qty": total_stock_qty,
+            "total_stock_refs": len(cached_stock),
         },
     )
 
@@ -181,6 +186,91 @@ async def get_analytics():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to load analytics data",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Pneustock Stock Inventory Endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/stock")
+async def get_stock():
+    """Return all cached tire stock items across all warehouses from pneustock.tech."""
+    try:
+        items = stock_service.get_cached_stock()
+        total_qty = sum(it.get("stock_quantity", 0) for it in items)
+        return JSONResponse(content={
+            "status": "success",
+            "count": len(items),
+            "total_quantity": total_qty,
+            "items": items,
+        })
+    except Exception as e:
+        logger.error(f"Error retrieving stock: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to load stock data: {str(e)}",
+        )
+
+
+@app.post("/api/stock/sync")
+async def sync_stock():
+    """Trigger live synchronization with pneustock.tech and refresh local cache."""
+    try:
+        items = stock_service.fetch_and_cache_stock()
+        total_qty = sum(it.get("stock_quantity", 0) for it in items)
+        return JSONResponse(content={
+            "status": "success",
+            "message": f"Stock synchronisé avec succès ({len(items)} références, {total_qty} pneus au total).",
+            "count": len(items),
+            "total_quantity": total_qty,
+            "items": items,
+        })
+    except Exception as e:
+        logger.error(f"Error syncing stock with pneustock.tech: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Échec de synchronisation avec pneustock.tech : {str(e)}",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Tyre Brands (Marques) Endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/brands")
+async def list_brands(search: Optional[str] = None):
+    """List all extracted tyre brands stored in SQLite database with optional filtering."""
+    try:
+        brands = db.get_all_brands(search=search)
+        return JSONResponse(content={
+            "status": "success",
+            "total": len(brands),
+            "brands": brands,
+        })
+    except Exception as e:
+        logger.error(f"Error retrieving brands: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur lors de la récupération des marques: {str(e)}",
+        )
+
+
+@app.post("/api/brands/sync")
+async def sync_brands():
+    """Extract and re-seed all tyre brands into the SQLite database."""
+    try:
+        count = db.seed_brands()
+        return JSONResponse(content={
+            "status": "success",
+            "message": f"{count} marques extraites et enregistrées dans la base de données avec succès.",
+            "total": count,
+        })
+    except Exception as e:
+        logger.error(f"Error synchronizing brands: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur lors de l'extraction des marques: {str(e)}",
         )
 
 

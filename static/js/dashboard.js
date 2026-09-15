@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currency: 'DH',
         analyticsData: null,
         geminiConfigured: false,
+        pneustockItems: [],
+        pneustockLoaded: false,
     };
 
     // Helper: Safe URL Reference
@@ -762,8 +764,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const BRAND_ALIASES = {
         'L': 'LASSA', 'P': 'PETLAS', 'G': 'GOODYEAR', 'GY': 'GOODYEAR', 'ST': 'STARMAXX',
-        'LF': 'LAUFENN', 'HN': 'HANKOOK', 'HK': 'HANKOOK', 'M': 'MICHELIN', 'MI': 'MICHELIN',
-        'LE': 'LEAO', 'MT': 'MONTREAL', 'LS': 'LANDSPIDER', 'DL': 'DELINTE', 'TR': 'TRIANGLE',
+        'LF': 'LAUFENN', 'LEUFENN': 'LAUFENN', 'HN': 'HANKOOK', 'HK': 'HANKOOK', 'M': 'MICHELIN', 'MI': 'MICHELIN',
+        'LE': 'LEAO', 'MT': 'MONTREAL', 'LS': 'LANDSPIDER', 'DL': 'DELINTE', 'DELINTE (D9D9)': 'DELINTE', 'TR': 'TRIANGLE',
         'R': 'ROTALLA', 'A': 'AMINE', 'N': 'NEXEN', 'NX': 'NEXEN', 'BT': 'BOTO',
         'AU': 'AUSTONE', 'SP': 'SEMPERIT', 'MM': 'MOMO', 'UN': 'UNIROYAL', 'SH': 'SEHA',
         'D': 'DUNLOP', 'ML': 'MILESTONE', 'CS': 'CITY STAR', 'TF': 'TIANFU', 'F': 'FIRESTONE',
@@ -773,13 +775,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function parseDescription(desc = '') {
         const text = (desc || '').trim();
-        const parenMatch = text.match(/\(([^)]+)\)/);
+        const parenMatch = text.match(/\(([^()]+)\)$/) || text.match(/\(([^()]+)\)/);
         let brand = '';
         let dimension = text;
         if (parenMatch) {
             let rawBrand = parenMatch[1].trim().toUpperCase();
             brand = BRAND_ALIASES[rawBrand] || rawBrand;
-            dimension = text.replace(/\([^)]+\)/, '').trim();
+            dimension = text.replace(/\s*\([^)]+\)$/, '').trim();
+            if (dimension === text) {
+                dimension = text.replace(/\s*\([^)]+\)/, '').trim();
+            }
         }
         return { dimension, brand };
     }
@@ -1053,14 +1058,207 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const DEPOT_OPTIONS = ['magaza 1', 'magaza 2', 'magaza 3', 'magaza 4'];
 
-    function buildDepotSelectHtml(selectedDepot = 'magaza 1') {
+    function normalizeTireDim(rawDim = '') {
+        if (!rawDim) return '';
+        const cleaned = rawDim.toUpperCase().replace(/\s+/g, '').replace(/-/g, '');
+        // Standard tyre size: e.g. 185/65R15 or 185/65/15
+        const m1 = cleaned.match(/(\d{3})[/\\]?(\d{2})R?(\d{2}(?:\.\d)?C?)/);
+        if (m1) {
+            return `${m1[1]}/${m1[2]}R${m1[3]}`;
+        }
+        // Commercial tyre without aspect ratio: e.g. 155R13 or 205R14C
+        const m2 = cleaned.match(/(\d{3})R?(\d{2}C?)/);
+        if (m2) {
+            return `${m2[1]}R${m2[2]}`;
+        }
+        return cleaned.replace(/\d{2,3}[A-Z]/g, '').trim();
+    }
+
+    function normalizeBrandName(rawBrand = '') {
+        if (!rawBrand) return '';
+        let b = (rawBrand || '').trim().toUpperCase();
+        if (b === 'AUTRE' || b === 'SANS MARQUE' || b === '-- SANS MARQUE --') return '';
+        if (BRAND_ALIASES[b]) return BRAND_ALIASES[b];
+        const m = b.match(/^([A-Z0-9\s]+?)\s*\(([A-Z0-9]+)\)$/);
+        if (m) {
+            const brandName = m[1].trim();
+            const aliasCode = m[2].trim();
+            if (BRAND_ALIASES[aliasCode]) return BRAND_ALIASES[aliasCode];
+            if (BRAND_ALIASES[brandName]) return BRAND_ALIASES[brandName];
+            return brandName.replace(/[^A-Z0-9]/g, '');
+        }
+        const mapped = BRAND_ALIASES[b] || b;
+        return mapped.replace(/[^A-Z0-9]/g, '');
+    }
+
+    function getAvailableStockPerDepot(dimension = '', brand = '') {
+        const stockByDepot = {
+            'magaza 1': 0,
+            'magaza 2': 0,
+            'magaza 3': 0,
+            'magaza 4': 0,
+        };
+
+        if (!state.pneustockItems || state.pneustockItems.length === 0) {
+            return stockByDepot;
+        }
+
+        const targetDim = normalizeTireDim(dimension);
+        const targetBrand = normalizeBrandName(brand);
+
+        if (!targetDim && !targetBrand) {
+            return stockByDepot;
+        }
+
+        state.pneustockItems.forEach(item => {
+            const wh = (item.warehouse_name || '').trim().toLowerCase();
+            if (!(wh in stockByDepot)) return;
+
+            const itemDim = normalizeTireDim(item.reference || '');
+            const itemBrand = normalizeBrandName(item.brand || '');
+
+            let dimMatches = false;
+            if (!targetDim) {
+                dimMatches = true;
+            } else if (itemDim) {
+                if (itemDim === targetDim) {
+                    dimMatches = true;
+                } else if (itemDim.includes(targetDim) || targetDim.includes(itemDim)) {
+                    dimMatches = true;
+                }
+            }
+
+            let brandMatches = false;
+            if (!targetBrand) {
+                brandMatches = true;
+            } else if (itemBrand) {
+                if (itemBrand === targetBrand) {
+                    brandMatches = true;
+                } else if (itemBrand.includes(targetBrand) || targetBrand.includes(itemBrand)) {
+                    brandMatches = true;
+                }
+            }
+
+            if (dimMatches && brandMatches) {
+                stockByDepot[wh] += (parseInt(item.stock_quantity) || 0);
+            }
+        });
+
+        return stockByDepot;
+    }
+
+    function buildDepotBadgesHtml(stockByDepot = {}) {
+        const s1 = stockByDepot['magaza 1'] ?? 0;
+        const s2 = stockByDepot['magaza 2'] ?? 0;
+        const s3 = stockByDepot['magaza 3'] ?? 0;
+        const s4 = stockByDepot['magaza 4'] ?? 0;
+
+        const badgeStyle = (qty) => qty > 0
+            ? 'background: rgba(16, 185, 129, 0.15); color: #10b981; font-weight: 700;'
+            : 'background: rgba(148, 163, 184, 0.12); color: #94a3b8;';
+
+        return `
+            <div class="row-depot-badges" style="display: flex; gap: 4px; margin-top: 4px; font-size: 10px; line-height: 1.2;">
+                <span style="padding: 2px 5px; border-radius: 4px; ${badgeStyle(s1)}" title="Magaza 1 : ${s1} séries disponibles">M1: ${s1}</span>
+                <span style="padding: 2px 5px; border-radius: 4px; ${badgeStyle(s2)}" title="Magaza 2 : ${s2} séries disponibles">M2: ${s2}</span>
+                <span style="padding: 2px 5px; border-radius: 4px; ${badgeStyle(s3)}" title="Magaza 3 : ${s3} séries disponibles">M3: ${s3}</span>
+                <span style="padding: 2px 5px; border-radius: 4px; ${badgeStyle(s4)}" title="Magaza 4 : ${s4} séries disponibles">M4: ${s4}</span>
+            </div>
+        `;
+    }
+
+    function buildDepotSelectHtml(selectedDepot = 'magaza 1', dimension = '', brand = '') {
         const target = (selectedDepot || 'magaza 1').trim().toLowerCase();
+        const stockByDepot = getAvailableStockPerDepot(dimension, brand);
         let options = '';
         DEPOT_OPTIONS.forEach(d => {
             const isSelected = (d.toLowerCase() === target);
-            options += `<option value="${d}" ${isSelected ? 'selected' : ''}>${d}</option>`;
+            const stock = stockByDepot[d.toLowerCase()] ?? 0;
+            const label = `${d} (${stock} dispo)`;
+            options += `<option value="${d}" ${isSelected ? 'selected' : ''}>${label}</option>`;
         });
         return `<select class="table-input row-depot" style="font-weight: 600; color: var(--accent-blue);">${options}</select>`;
+    }
+
+    function updateRowDepotOptions(tr) {
+        if (!tr) return;
+        const dimInput = tr.querySelector('.row-dim');
+        const brandSelect = tr.querySelector('.row-brand');
+        const depotSelect = tr.querySelector('.row-depot');
+        if (!depotSelect) return;
+
+        const currentVal = (depotSelect.value || 'magaza 1').trim().toLowerCase();
+        const dim = dimInput ? dimInput.value : '';
+        const brand = brandSelect ? brandSelect.value : '';
+        const stockByDepot = getAvailableStockPerDepot(dim, brand);
+
+        depotSelect.innerHTML = '';
+        DEPOT_OPTIONS.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d;
+            const stock = stockByDepot[d.toLowerCase()] ?? 0;
+            opt.textContent = `${d} (${stock} dispo)`;
+            if (d.toLowerCase() === currentVal) {
+                opt.selected = true;
+            }
+            depotSelect.appendChild(opt);
+        });
+
+        const badgesContainer = tr.querySelector('.row-depot-badges-container');
+        if (badgesContainer) {
+            badgesContainer.innerHTML = buildDepotBadgesHtml(stockByDepot);
+        }
+    }
+
+    function updateAllMagazaDepotOptions() {
+        if (!resultsTableBodyMagaza) return;
+        resultsTableBodyMagaza.querySelectorAll('tr').forEach(tr => {
+            updateRowDepotOptions(tr);
+        });
+    }
+
+    async function loadPneustockData(forceSync = false) {
+        const countEl = document.getElementById('pneustock-stock-count');
+        const syncBtn = document.getElementById('pneustock-sync-btn');
+        if (countEl && forceSync) countEl.textContent = 'Synchronisation...';
+        if (syncBtn && forceSync) {
+            syncBtn.disabled = true;
+            syncBtn.innerHTML = '<i data-lucide="loader-2" style="width: 12px; height: 12px;"></i> Sync...';
+            refreshIcons();
+        }
+
+        try {
+            const url = forceSync ? '/api/stock/sync' : '/api/stock';
+            const method = forceSync ? 'POST' : 'GET';
+            const res = await fetch(url, { method });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            state.pneustockItems = data.items || [];
+            state.pneustockLoaded = true;
+
+            const totalQty = data.total_quantity || 0;
+            const count = data.count || state.pneustockItems.length;
+            if (countEl) {
+                countEl.textContent = `Stock : ${totalQty.toLocaleString('fr-FR')} pneus dispo`;
+                countEl.title = `${totalQty} pneus répartis dans les 4 dépôts (${count} références)`;
+            }
+            if (forceSync) {
+                showToast(`Stock synchronisé avec succès : ${totalQty.toLocaleString('fr-FR')} pneus disponibles.`, 'success');
+            }
+            updateAllMagazaDepotOptions();
+        } catch (err) {
+            console.error('Erreur chargement stock pneustock:', err);
+            if (countEl) countEl.textContent = 'Stock pneustock : Hors-ligne';
+            if (forceSync) {
+                showToast('Impossible de synchroniser avec pneustock.tech', 'error');
+            }
+        } finally {
+            if (syncBtn) {
+                syncBtn.disabled = false;
+                syncBtn.innerHTML = '<i data-lucide="refresh-cw" style="width: 12px; height: 12px;"></i> Sync';
+                refreshIcons();
+            }
+        }
     }
 
     if (dropzoneMagaza && fileInputMagaza) {
@@ -1259,33 +1457,43 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function appendMagazaTableRow(desc = '', qty = 1, price = 0, subtotal = 0, depot = 'magaza 1', index = null) {
+    function appendMagazaTableRow(desc = '', qty = 1, price = 0, subtotal = 0, depot = 'magaza 1', index = null, directDim = null, directBrand = null) {
         if (!resultsTableBodyMagaza) return;
         const tr = document.createElement('tr');
         const idxNum = index || (resultsTableBodyMagaza.children.length + 1);
-        const parsed = parseDescription(desc);
+
+        let parsedDim = directDim;
+        let parsedBrand = directBrand;
+        if (!parsedDim || !parsedBrand) {
+            const parsed = parseDescription(desc);
+            parsedDim = parsedDim || parsed.dimension;
+            parsedBrand = parsedBrand || parsed.brand;
+        }
+
+        const stockByDepot = getAvailableStockPerDepot(parsedDim, parsedBrand);
 
         tr.innerHTML = `
-            <td style="width: 4%; text-align: center; color: var(--text-muted); font-weight: bold;">${idxNum}</td>
-            <td style="width: 22%;">
-                <input type="text" class="table-input row-dim" value="${parsed.dimension}" placeholder="ex: 175/70 R13" />
+            <td style="width: 3%; text-align: center; color: var(--text-muted); font-weight: bold;">${idxNum}</td>
+            <td style="width: 20%;">
+                <input type="text" class="table-input row-dim" value="${parsedDim || ''}" placeholder="ex: 175/70 R13" />
             </td>
-            <td style="width: 18%;">
-                ${buildBrandSelectHtml(parsed.brand)}
+            <td style="width: 17%;">
+                ${buildBrandSelectHtml(parsedBrand || '')}
             </td>
-            <td style="width: 16%;">
-                ${buildDepotSelectHtml(depot)}
+            <td style="width: 20%;">
+                ${buildDepotSelectHtml(depot, parsedDim || '', parsedBrand || '')}
+                <div class="row-depot-badges-container">${buildDepotBadgesHtml(stockByDepot)}</div>
             </td>
-            <td style="width: 11%;">
+            <td style="width: 10%;">
                 <input type="number" class="table-input row-qty" value="${qty}" min="1" step="1" />
             </td>
-            <td style="width: 11%;">
+            <td style="width: 10%;">
                 <input type="number" class="table-input row-price" value="${price}" min="0" step="0.5" />
             </td>
-            <td style="width: 9%; font-weight: bold;" class="row-subtotal">
+            <td style="width: 10%; font-weight: bold;" class="row-subtotal">
                 ${Number(subtotal).toFixed(2)} ${state.currency}
             </td>
-            <td style="width: 9%; text-align: center; white-space: nowrap;">
+            <td style="width: 10%; text-align: center; white-space: nowrap;">
                 <button type="button" class="btn btn-secondary btn-sm row-up-btn" title="Monter" style="padding: 3px 6px; margin-right: 2px;"><i data-lucide="chevron-up"></i></button>
                 <button type="button" class="btn btn-secondary btn-sm row-down-btn" title="Descendre" style="padding: 3px 6px; margin-right: 2px;"><i data-lucide="chevron-down"></i></button>
                 <button type="button" class="btn btn-rose btn-sm row-del-btn" title="Supprimer la ligne" style="padding: 3px 6px;"><i data-lucide="trash-2"></i></button>
@@ -1294,6 +1502,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const qtyInput = tr.querySelector('.row-qty');
         const priceInput = tr.querySelector('.row-price');
+        const dimInput = tr.querySelector('.row-dim');
+        const brandSelect = tr.querySelector('.row-brand');
         const depotSelect = tr.querySelector('.row-depot');
         const subtotalCell = tr.querySelector('.row-subtotal');
         const upBtn = tr.querySelector('.row-up-btn');
@@ -1311,6 +1521,13 @@ document.addEventListener('DOMContentLoaded', () => {
         qtyInput.addEventListener('input', recalculateRow);
         priceInput.addEventListener('input', recalculateRow);
         depotSelect.addEventListener('change', updateMagazaTableTotals);
+
+        if (dimInput) {
+            dimInput.addEventListener('input', () => updateRowDepotOptions(tr));
+        }
+        if (brandSelect) {
+            brandSelect.addEventListener('change', () => updateRowDepotOptions(tr));
+        }
 
         upBtn.addEventListener('click', () => {
             const prev = tr.previousElementSibling;
@@ -1390,10 +1607,15 @@ document.addEventListener('DOMContentLoaded', () => {
             invoice.items.forEach((item, idx) => {
                 const descWithBrand = item.brand ? `${item.reference || item.description} (${item.brand})` : item.description;
                 const depotVal = item.depot || 'magaza 1';
-                appendMagazaTableRow(descWithBrand, item.quantity, item.unit_price, item.subtotal, depotVal, idx + 1);
+                appendMagazaTableRow(descWithBrand, item.quantity, item.unit_price, item.subtotal, depotVal, idx + 1, item.reference, item.brand);
             });
         }
         updateMagazaTableTotals();
+        updateAllMagazaDepotOptions();
+
+        try {
+            sessionStorage.setItem('last_magaza_invoice', JSON.stringify(invoice));
+        } catch (e) {}
 
         const viewPhotosBtnMagaza = document.getElementById('view-source-photos-btn-magaza');
         const sourceCountElMagaza = document.getElementById('source-photos-count-magaza');
@@ -1711,6 +1933,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             checkScannerKeyStatus();
             checkMagazaKeyStatus();
+            loadBrandsList();
             refreshIcons();
 
         } catch (err) {
@@ -1826,12 +2049,127 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ----------------------------------------------------------------------
+    // Brands Management in Settings
+    // ----------------------------------------------------------------------
+    const brandsCountBadge = document.getElementById('brands-count-badge');
+    const brandsSearchInput = document.getElementById('brands-search-input');
+    const brandsListContainer = document.getElementById('brands-list-container');
+    const syncBrandsBtn = document.getElementById('sync-brands-btn');
+
+    async function loadBrandsList(search = '') {
+        if (!brandsListContainer) return;
+        try {
+            const url = search ? `/api/brands?search=${encodeURIComponent(search)}` : '/api/brands';
+            const res = await fetch(url);
+            if (!res.ok) return;
+            const data = await res.json();
+            const brands = data.brands || [];
+
+            if (brandsCountBadge) {
+                brandsCountBadge.textContent = `${data.total || brands.length} marques`;
+            }
+
+            brandsListContainer.innerHTML = '';
+            if (brands.length === 0) {
+                brandsListContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 10px;">Aucune marque trouvée.</div>';
+                return;
+            }
+
+            brands.forEach(b => {
+                const pill = document.createElement('span');
+                pill.style.cssText = 'padding: 4px 8px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 6px; font-size: 11px; display: inline-flex; align-items: center; gap: 5px; color: var(--text-primary);';
+                let content = `<b>${b.name}</b>`;
+                if (b.code) {
+                    content += `<span class="table-badge source-web" style="font-size: 9px; padding: 1px 4px;">${b.code}</span>`;
+                }
+                if (b.country) {
+                    content += `<span style="font-size: 10px; color: var(--text-muted);">${b.country}</span>`;
+                }
+                pill.innerHTML = content;
+                brandsListContainer.appendChild(pill);
+            });
+        } catch (e) {
+            console.error('Erreur chargement marques:', e);
+        }
+    }
+
+    if (brandsSearchInput) {
+        let debounceTimer = null;
+        brandsSearchInput.addEventListener('input', (e) => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                loadBrandsList(e.target.value.trim());
+            }, 250);
+        });
+    }
+
+    if (syncBrandsBtn) {
+        syncBrandsBtn.addEventListener('click', async () => {
+            try {
+                syncBrandsBtn.disabled = true;
+                syncBrandsBtn.innerHTML = '<i data-lucide="loader-2" style="width: 12px; height: 12px;"></i> Extraction...';
+                refreshIcons();
+
+                const res = await fetch('/api/brands/sync', { method: 'POST' });
+                if (!res.ok) throw new Error('Échec de la synchronisation des marques');
+                const data = await res.json();
+                showToast(data.message || 'Marques synchronisées avec succès !', 'success');
+                loadBrandsList(brandsSearchInput ? brandsSearchInput.value.trim() : '');
+            } catch (err) {
+                console.error(err);
+                showToast('Erreur lors de la synchronisation des marques.', 'error');
+            } finally {
+                syncBrandsBtn.disabled = false;
+                syncBrandsBtn.innerHTML = '<i data-lucide="refresh-cw" style="width: 12px; height: 12px;"></i> Ré-extraire / Sync';
+                refreshIcons();
+            }
+        });
+    }
+
+    // ----------------------------------------------------------------------
     // Initialization
     // ----------------------------------------------------------------------
     initTheme();
     loadSettings();
+    loadPneustockData(false);
+
+    const pneustockSyncBtn = document.getElementById('pneustock-sync-btn');
+    if (pneustockSyncBtn) {
+        pneustockSyncBtn.addEventListener('click', () => loadPneustockData(true));
+    }
+
     const currentPath = window.location.pathname.replace(/\/$/, '') || '/';
     const initialTab = urlToTab[currentPath] || 'dashboard';
     switchTab(initialTab, false);
+
+    // Auto-restore or load latest invoice into Magaza view if empty
+    try {
+        const cachedMagazaInv = sessionStorage.getItem('last_magaza_invoice');
+        if (cachedMagazaInv) {
+            const parsed = JSON.parse(cachedMagazaInv);
+            if (parsed && parsed.items && parsed.items.length > 0) {
+                state.currentInvoiceMagaza = parsed;
+                renderEditableMagazaResults(parsed);
+            }
+        } else if (initialTab === 'magaza') {
+            fetch('/api/invoices')
+                .then(r => r.json())
+                .then(d => {
+                    if (d && d.invoices && d.invoices.length > 0 && !state.currentInvoiceMagaza) {
+                        const latest = d.invoices[0];
+                        return fetch(`/api/invoices/${safeRef(latest.invoice_ref)}`);
+                    }
+                })
+                .then(r => r ? r.json() : null)
+                .then(inv => {
+                    if (inv && inv.items && inv.items.length > 0 && !state.currentInvoiceMagaza) {
+                        state.currentInvoiceMagaza = inv;
+                        renderEditableMagazaResults(inv);
+                    }
+                })
+                .catch(e => console.debug('No prior invoice to auto-load:', e));
+        }
+    } catch (e) {}
+
     refreshIcons();
 });

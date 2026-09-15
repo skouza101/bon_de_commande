@@ -4,6 +4,7 @@ Manages SQLite storage for consolidated invoices, line items, and analytics metr
 """
 
 import datetime
+import json
 import logging
 import re
 import sqlite3
@@ -74,9 +75,22 @@ class Database:
                     FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
                 );
 
+                CREATE TABLE IF NOT EXISTS brands (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT UNIQUE NOT NULL,
+                    code TEXT DEFAULT '',
+                    aliases TEXT DEFAULT '',
+                    country TEXT DEFAULT '',
+                    manufacturer_year INTEGER,
+                    pneustock_id TEXT DEFAULT '',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+
                 CREATE INDEX IF NOT EXISTS idx_invoices_ref ON invoices(invoice_ref);
                 CREATE INDEX IF NOT EXISTS idx_invoices_client ON invoices(client_name);
                 CREATE INDEX IF NOT EXISTS idx_items_invoice ON invoice_items(invoice_id);
+                CREATE INDEX IF NOT EXISTS idx_brands_name ON brands(name);
+                CREATE INDEX IF NOT EXISTS idx_brands_code ON brands(code);
             """)
 
             # Run column migrations for existing databases
@@ -100,6 +114,13 @@ class Database:
                 cursor.execute("ALTER TABLE invoice_items ADD COLUMN depot TEXT DEFAULT 'magaza 1'")
 
             conn.commit()
+
+        # Seed brands if table is empty
+        try:
+            if self.get_brands_count() == 0:
+                self.seed_brands()
+        except Exception as err:
+            logger.warning(f"Could not auto-seed brands on startup: {err}")
 
     def save_consolidated_invoice(
         self,
@@ -448,6 +469,152 @@ class Database:
                 "currency": settings.currency,
                 "company_name": settings.company_name,
             }
+
+    # -----------------------------------------------------------------------
+    # Brands (Marques) Persistence & Extraction Methods
+    # -----------------------------------------------------------------------
+
+    def seed_brands(self, brands_json_path: Optional[Path] = None) -> int:
+        """Extract all brand names from pneustock brands.json & mappings, and insert into DB."""
+        json_path = brands_json_path or (Path(__file__).parent / "extracted_pneustock_data" / "brands.json")
+        brands_data: List[Dict[str, Any]] = []
+        if json_path.exists():
+            try:
+                with open(json_path, "r", encoding="utf-8") as f:
+                    brands_data = json.load(f)
+            except Exception as e:
+                logger.error(f"Error reading brands from {json_path}: {e}")
+
+        # Also import BRAND_MAPPINGS from consolidator to attach shorthand codes
+        from consolidator import BRAND_MAPPINGS
+
+        abbrevs_by_brand: Dict[str, List[str]] = {}
+        for code, full_name in BRAND_MAPPINGS.items():
+            if len(code) <= 3 and code != full_name:
+                abbrevs_by_brand.setdefault(full_name.upper(), []).append(code)
+
+        unique_brands: Dict[str, Dict[str, Any]] = {}
+
+        # 1. Ingest brands from brands.json (169 marques)
+        for item in brands_data:
+            name = (item.get("name") or "").strip()
+            if not name:
+                continue
+            name_key = name.lower()
+            clean_name = name.upper().replace(" ", "").replace("-", "")
+
+            matched_codes: List[str] = []
+            for k, c_list in abbrevs_by_brand.items():
+                if k == clean_name or k in clean_name or clean_name in k:
+                    matched_codes.extend(c_list)
+
+            primary_code = matched_codes[0] if matched_codes else ""
+            aliases_str = ", ".join(sorted(set(matched_codes)))
+
+            unique_brands[name_key] = {
+                "name": name,
+                "code": primary_code,
+                "aliases": aliases_str,
+                "country": (item.get("country") or "").strip(),
+                "manufacturer_year": item.get("manufacturerYear"),
+                "pneustock_id": (item.get("id") or "").strip(),
+            }
+
+        # 2. Ingest any additional brands known in BRAND_MAPPINGS
+        for code, full_name in BRAND_MAPPINGS.items():
+            if not full_name:
+                continue
+            name_key = full_name.lower()
+            if name_key not in unique_brands:
+                codes = abbrevs_by_brand.get(full_name.upper(), [code] if len(code) <= 3 else [])
+                unique_brands[name_key] = {
+                    "name": full_name.title(),
+                    "code": codes[0] if codes else (code if len(code) <= 3 else ""),
+                    "aliases": ", ".join(sorted(set(codes))),
+                    "country": "",
+                    "manufacturer_year": None,
+                    "pneustock_id": "",
+                }
+
+        # 3. Insert or update in SQLite database
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            inserted_count = 0
+            for b in unique_brands.values():
+                cursor.execute("""
+                    INSERT INTO brands (name, code, aliases, country, manufacturer_year, pneustock_id)
+                    VALUES (:name, :code, :aliases, :country, :manufacturer_year, :pneustock_id)
+                    ON CONFLICT(name) DO UPDATE SET
+                        code = CASE WHEN excluded.code != '' THEN excluded.code ELSE brands.code END,
+                        aliases = CASE WHEN excluded.aliases != '' THEN excluded.aliases ELSE brands.aliases END,
+                        country = CASE WHEN excluded.country != '' THEN excluded.country ELSE brands.country END,
+                        manufacturer_year = COALESCE(excluded.manufacturer_year, brands.manufacturer_year),
+                        pneustock_id = CASE WHEN excluded.pneustock_id != '' THEN excluded.pneustock_id ELSE brands.pneustock_id END
+                """, b)
+                inserted_count += 1
+            conn.commit()
+
+        logger.info(f"Successfully seeded {inserted_count} tyre brands into SQLite database.")
+        return inserted_count
+
+    def get_all_brands(self, search: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Retrieve all tyre brands from the database with optional search filtering."""
+        query = "SELECT id, name, code, aliases, country, manufacturer_year, pneustock_id, created_at FROM brands"
+        params: List[Any] = []
+        if search and search.strip():
+            query += " WHERE name LIKE ? OR code LIKE ? OR aliases LIKE ? OR country LIKE ?"
+            term = f"%{search.strip()}%"
+            params = [term, term, term, term]
+        query += " ORDER BY name COLLATE NOCASE ASC"
+
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_brands_count(self) -> int:
+        """Count the total number of tyre brands stored in the database."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM brands")
+            row = cursor.fetchone()
+            return row[0] if row else 0
+
+    def get_brand_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+        """Look up a brand by exact name or abbreviation code."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM brands WHERE LOWER(name) = LOWER(?) OR LOWER(code) = LOWER(?) LIMIT 1",
+                (name.strip(), name.strip()),
+            )
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def add_or_update_brand(
+        self,
+        name: str,
+        code: str = "",
+        aliases: str = "",
+        country: str = "",
+        manufacturer_year: Optional[int] = None,
+        pneustock_id: str = "",
+    ) -> int:
+        """Add or update an individual tyre brand in the database."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO brands (name, code, aliases, country, manufacturer_year, pneustock_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(name) DO UPDATE SET
+                    code = excluded.code,
+                    aliases = excluded.aliases,
+                    country = excluded.country,
+                    manufacturer_year = excluded.manufacturer_year,
+                    pneustock_id = excluded.pneustock_id
+            """, (name.strip(), code.strip(), aliases.strip(), country.strip(), manufacturer_year, pneustock_id.strip()))
+            conn.commit()
+            return cursor.lastrowid or 0
 
 
 # Global database instance
